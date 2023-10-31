@@ -45,7 +45,7 @@ bool MBController::init(hardware_interface::RobotHW* robot_hardware,
     if (std::abs(position_joint_handles_[i].getPosition() - q_start[i]) > 0.1) {
       ROS_ERROR_STREAM(
           "MBController: Robot is not in the expected starting position for "
-          "running this example. Run `roslaunch franka_example_controllers MB_move_to_start.launch "
+          "running this example. Run `roslaunch franka_example_controllers move_to_start.launch "
           "robot_ip:=<robot-ip> load_gripper:=<has-attached-gripper>` first.");
       return false;
     }
@@ -63,17 +63,16 @@ void MBController::starting(const ros::Time& /* time */) {
 
 void MBController::update(const ros::Time& /*time*/,
                                             const ros::Duration& period) {
-    elapsed_time_ += period;
-    double elapsed_time = elapsed_time_.toSec();
-    double delta_angle = 0.5 * (M_PI / 180);
+  elapsed_time_ += period;
 
-    if (elapsed_time < 2 or elapsed_time > 5) {
-        std::cout << 180/M_PI*position_joint_handles_[1].getPosition() << ",";
-        position_joint_handles_[1].setCommand(initial_pose_[1]);
+  double delta_angle = M_PI / 16 * (1 - std::cos(M_PI / 5.0 * elapsed_time_.toSec())) * 0.2;
+  for (size_t i = 0; i < 7; ++i) {
+    if (i == 4) {
+      position_joint_handles_[i].setCommand(initial_pose_[i] - delta_angle);
     } else {
-        std::cout << 180/M_PI*position_joint_handles_[1].getPosition() << " <<<<<<<<<\n";
-        position_joint_handles_[1].setCommand(initial_pose_[1]+delta_angle);
+      position_joint_handles_[i].setCommand(initial_pose_[i] + delta_angle);
     }
+  }
 }
 
 }  // namespace franka_example_controllers
