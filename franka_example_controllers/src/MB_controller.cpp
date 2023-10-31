@@ -50,7 +50,19 @@ bool MBController::init(hardware_interface::RobotHW* robot_hardware,
       return false;
     }
   }
-
+  auto* model_interface = robot_hardware->get<franka_hw::FrankaModelInterface>();
+  if (model_interface == nullptr) {
+    ROS_ERROR_STREAM(
+        "CartesianImpedanceExampleController: Error getting model interface from hardware");
+    return false;
+  }
+  try {
+    model_handle_ = std::make_unique<franka_hw::FrankaModelHandle>(
+        model_interface->getHandle("panda_model"));
+  } catch (hardware_interface::HardwareInterfaceException& ex) {
+    ROS_ERROR_STREAM("MBController: Exception getting model handle from interface: " << ex.what());
+    return false;
+  }
   return true;
 }
 
@@ -58,21 +70,60 @@ void MBController::starting(const ros::Time& /* time */) {
   for (size_t i = 0; i < 7; ++i) {
     initial_pose_[i] = position_joint_handles_[i].getPosition();
   }
+  initial_O_T_EE_ = model_handle_->getPose(franka::Frame::kEndEffector);
   elapsed_time_ = ros::Duration(0.0);
 }
 
 void MBController::update(const ros::Time& /*time*/,
                                             const ros::Duration& period) {
   elapsed_time_ += period;
+  std::cout << "period=" << period << " ***\n";
 
   double delta_angle = M_PI / 16 * (1 - std::cos(M_PI / 5.0 * elapsed_time_.toSec())) * 0.2;
+  std::cout << "delta_angle=" << delta_angle << " ***\n";
   for (size_t i = 0; i < 7; ++i) {
+    joints_pose_[i]=position_joint_handles_[i].getPosition();
     if (i == 4) {
       position_joint_handles_[i].setCommand(initial_pose_[i] - delta_angle);
     } else {
       position_joint_handles_[i].setCommand(initial_pose_[i] + delta_angle);
     }
   }
+
+  std::cout << "joints_pose_=";
+  for (int j=0 ; j<7 ; j++ )
+  {
+    std::cout << joints_pose_[j]<<"\t";
+  }
+  std::cout << "***\n";
+
+  // get jacobian
+  std::array<double, 42> jacobian_array =
+      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  std::cout << ">>>>>>>>>>>>>>>jacobian_array=\n";
+    for (int i = 0; i < 6; i++)
+    {
+      for (int j = 0; j < 7; j++)
+      {
+        std::cout << jacobian_array[i,j] << " ";
+      }
+
+      // Newline for new row
+      std::cout << std::endl;
+    }
+    // Gets the 4x4 pose matrix for the given frame in base frame, calculated from the current robot state.
+    std::array<double, 16> O_T_EE_ = model_handle_->getPose(franka::Frame::kEndEffector);
+    std::cout << "@@@@@@@@@@@@@@@@@@O_T_EE_=\n";
+    for (int i = 0; i < 4; i++)
+    {
+      for (int j = 0; j < 4; j++)
+      {
+        std::cout << O_T_EE_[i,j] << " ";
+      }
+
+      // Newline for new row
+      std::cout << std::endl;
+    }
 }
 
 }  // namespace franka_example_controllers
