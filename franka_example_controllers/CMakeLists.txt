@@ -76,6 +76,7 @@ add_library(franka_example_controllers
   src/cartesian_pose_example_controller.cpp
   src/cartesian_velocity_example_controller.cpp
   src/joint_position_example_controller.cpp
+  src/MB_controller.cpp
   src/joint_velocity_example_controller.cpp
   src/model_example_controller.cpp
   src/joint_impedance_example_controller.cpp
@@ -147,7 +148,10 @@ catkin_install_python(
   PROGRAMS scripts/interactive_marker.py scripts/move_to_start.py scripts/dual_arm_interactive_marker.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
-
+catkin_install_python(
+        PROGRAMS scripts/interactive_marker.py scripts/MB_move_to_start.py scripts/dual_arm_interactive_marker.py
+        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 ## Tools
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/ClangTools.cmake OPTIONAL
   RESULT_VARIABLE CLANG_TOOLS
