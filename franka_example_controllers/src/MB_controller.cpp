@@ -11,6 +11,12 @@
 #include <ros/ros.h>
 #include <franka/robot_state.h>
 
+#include "mat.h"
+#include <iostream>
+#include <vector>
+#include <franka_example_controllers/pseudo_inversion.h>
+
+
 namespace franka_example_controllers {
 
 bool MBController::init(hardware_interface::RobotHW* robot_hardware,
@@ -77,6 +83,29 @@ bool MBController::init(hardware_interface::RobotHW* robot_hardware,
   return true;
 }
 
+void matread(const char *file, std::vector<double>& v)
+{
+  // open MAT-file
+  MATFile *pmat = matOpen(file, "r");
+  if (pmat == NULL) return;
+
+  // extract the specified variable
+  mxArray *arr = matGetVariable(pmat, "LocalDouble");
+  if (arr != NULL && mxIsDouble(arr) && !mxIsEmpty(arr)) {
+    // copy data
+    mwSize num = mxGetNumberOfElements(arr);
+    double *pr = mxGetPr(arr);
+    if (pr != NULL) {
+      v.reserve(num); //is faster than resize :-)
+      v.assign(pr, pr+num);
+    }
+  }
+
+  // cleanup
+  mxDestroyArray(arr);
+  matClose(pmat);
+}
+
 void MBController::starting(const ros::Time& /* time */) {
   for (size_t i = 0; i < 7; ++i) {
     initial_pose_[i] = position_joint_handles_[i].getPosition();
@@ -85,6 +114,13 @@ void MBController::starting(const ros::Time& /* time */) {
   elapsed_time_ = ros::Duration(0.0);
 }
 
+//std::array<double, 7> dq_c(q, x_e, v_e, r_traj[k,:].T, v_traj[k,:].T,e,ts)
+//{
+//  if (x > y)
+//    return x;
+//  else
+//    return y;
+//}
 void MBController::update(const ros::Time& /*time*/,
                                             const ros::Duration& period) {
   elapsed_time_ += period;
@@ -101,16 +137,16 @@ void MBController::update(const ros::Time& /*time*/,
     }
   }
 
-//  std::cout << "joints_pose_=";
-//  for (int j=0 ; j<7 ; j++ )
-//  {
-//    std::cout << joints_pose_[j]<<"\t";
-//  }
-//  std::cout << "***\n";
+  std::cout << "joints_pose_=";
+  for (int j=0 ; j<7 ; j++ )
+  {
+    std::cout << joints_pose_[j]<<"\t";
+  }
+  std::cout << "***\n";
 
-//  // get jacobian
-//  std::array<double, 42> jacobian_array =
-//      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  // get jacobian
+  std::array<double, 42> jacobian_array =
+      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
 //  std::cout << ">>>>>>>>>>>>>>>jacobian_array=\n";
 //    for (int i = 0; i < 6; i++)
 //    {
@@ -140,7 +176,7 @@ void MBController::update(const ros::Time& /*time*/,
     franka::RobotState robot_state = state_handle_->getRobotState();
 //    std::array<double, 16> O_T_EE = robot_state.O_T_EE.data();
     Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
-    Eigen::Vector3d position(transform.translation());
+    Eigen::Vector3d EEposition(transform.translation());
     Eigen::Quaterniond orientation(transform.rotation());
     std::cout << "**********transform=\n";
     for (int i = 0; i < 4; i++)
@@ -152,16 +188,49 @@ void MBController::update(const ros::Time& /*time*/,
       // Newline for new row
       std::cout << std::endl;
     }
-    std::cout << "**position=\n";
+    std::cout << "**EEposition=\n";
     for (int i = 0; i < 3; i++)
     {
-      std::cout << position(i) << " ";
+      std::cout << EEposition(i) << " ";
       std::cout << std::endl;
     }
     std::cout << "*orientation_scalar="<< orientation.w();
     std::cout << std::endl;
     std::cout << "*orientation_vec="<< orientation.vec();
     std::cout << std::endl;
+
+    Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
+    std::cout << "q="<< q;
+    std::cout << std::endl;
+
+    Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
+    std::cout << "dq="<< dq;
+    std::cout << std::endl;
+
+    Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
+//    Eigen::Map<const Eigen::Matrix<double, 7, 1>> drdtheta(jacobian*dq);
+    std::cout << "jacobian*dq="<< jacobian*dq;
+    std::cout << std::endl;
+
+    std::vector<double> v;
+    matread("/home/mahdi/ETHZ/codes/rl_reach/code/logs/data_tmp_1kHz.mat", data_tmp_1kHz);
+    std::cout << "data_tmp_1kHz.size()="<< data_tmp_1kHz.size();
+    std::cout << std::endl;
+
+    Eigen::MatrixXd jacobian_pinv;
+    pseudoInverse(jacobian, jacobian_transpose_pinv);
+    std::cout << ">>>>>>>>>>>jacobian_pinv="<< jacobian_transpose_pinv;
+    std::cout << std::endl;
+
+//    double K_p = 50;
+//    double ld = 0.1;
+//    e_t = (data_tmp_1kHz_r - EEposition)
+//    e=np.hstack((e, e_t.reshape(3,1)))
+////    double K_i=50;
+////    double K_d=1;
+//    v_command = data_tmp_1kHz_v + K_p * e_t; //+ K_i * np.sum(e[:,1:],1)*ts + K_d*(v_ref-v_e)
+//    vq = np.dot(jacobian_transpose_pinv, v_command)
+
     }
 
 }  // namespace franka_example_controllers
