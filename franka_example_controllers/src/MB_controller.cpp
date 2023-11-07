@@ -11,10 +11,13 @@
 #include <ros/ros.h>
 #include <franka/robot_state.h>
 
-#include "mat.h"
 #include <iostream>
 #include <vector>
 #include <franka_example_controllers/pseudo_inversion.h>
+
+#include <string>
+#include <fstream>
+#include <iostream>
 
 
 namespace franka_example_controllers {
@@ -83,28 +86,26 @@ bool MBController::init(hardware_interface::RobotHW* robot_hardware,
   return true;
 }
 
-void matread(const char *file, std::vector<double>& v)
+bool saveArray( const double* pdata, size_t length, const std::string& file_path )
 {
-  // open MAT-file
-  MATFile *pmat = matOpen(file, "r");
-  if (pmat == NULL) return;
-
-  // extract the specified variable
-  mxArray *arr = matGetVariable(pmat, "LocalDouble");
-  if (arr != NULL && mxIsDouble(arr) && !mxIsEmpty(arr)) {
-    // copy data
-    mwSize num = mxGetNumberOfElements(arr);
-    double *pr = mxGetPr(arr);
-    if (pr != NULL) {
-      v.reserve(num); //is faster than resize :-)
-      v.assign(pr, pr+num);
-    }
-  }
-
-  // cleanup
-  mxDestroyArray(arr);
-  matClose(pmat);
+  std::ofstream os(file_path.c_str(), std::ios::binary | std::ios::out);
+  if ( !os.is_open() )
+    return false;
+  os.write(reinterpret_cast<const char*>(pdata), std::streamsize(length*sizeof(double)));
+  os.close();
+  return true;
 }
+
+bool loadArray( double* pdata, size_t length, const std::string& file_path)
+{
+  std::ifstream is(file_path.c_str(), std::ios::binary | std::ios::in);
+  if ( !is.is_open() )
+    return false;
+  is.read(reinterpret_cast<char*>(pdata), std::streamsize(length*sizeof(double)));
+  is.close();
+  return true;
+}
+
 
 void MBController::starting(const ros::Time& /* time */) {
   for (size_t i = 0; i < 7; ++i) {
@@ -212,15 +213,21 @@ void MBController::update(const ros::Time& /*time*/,
     std::cout << "jacobian*dq="<< jacobian*dq;
     std::cout << std::endl;
 
-    std::vector<double> v;
-    matread("/home/mahdi/ETHZ/codes/rl_reach/code/logs/data_tmp_1kHz.mat", data_tmp_1kHz);
-    std::cout << "data_tmp_1kHz.size()="<< data_tmp_1kHz.size();
-    std::cout << std::endl;
+    double* pDbl = new double[1000];
+    int i;
+    for (i=0 ; i<1000 ; i++)
+      pDbl[i] = double(rand());
+    saveArray(pDbl,1000,"/home/mahdi/ETHZ/codes/rl_reach/code/logs/test.txt");
 
-    Eigen::MatrixXd jacobian_pinv;
-    pseudoInverse(jacobian, jacobian_transpose_pinv);
-    std::cout << ">>>>>>>>>>>jacobian_pinv="<< jacobian_transpose_pinv;
-    std::cout << std::endl;
+//    std::vector<double> v;
+//    matread("/home/mahdi/ETHZ/codes/rl_reach/code/logs/data_tmp_1kHz.mat", data_tmp_1kHz);
+//    std::cout << "data_tmp_1kHz.size()="<< data_tmp_1kHz.size();
+//    std::cout << std::endl;
+//
+//    Eigen::MatrixXd jacobian_pinv;
+//    pseudoInverse(jacobian, jacobian_transpose_pinv);
+//    std::cout << ">>>>>>>>>>>jacobian_pinv="<< jacobian_transpose_pinv;
+//    std::cout << std::endl;
 
 //    double K_p = 50;
 //    double ld = 0.1;

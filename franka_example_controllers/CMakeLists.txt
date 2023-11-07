@@ -85,7 +85,7 @@ add_library(franka_example_controllers
   src/dual_arm_cartesian_impedance_example_controller.cpp
   src/teleop_joint_pd_example_controller.cpp
   src/joint_wall.cpp
-        include/franka_example_controllers/matcreat.cpp
+        src/debug_test.cpp
 )
 
 add_dependencies(franka_example_controllers
@@ -112,6 +112,13 @@ target_include_directories(franka_example_controllers PUBLIC
 add_executable(teleop_gripper_node
   src/teleop_gripper_node.cpp
 )
+
+add_executable(debug_test
+        /home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/src/debug_test.cpp
+)
+target_link_libraries(debug_test m)
+#target_include_directories(debug_test /usr/local/MATLAB/R2023b/extern/include)
+
 target_include_directories(teleop_gripper_node PUBLIC
   ${catkin_INCLUDE_DIRS}
 )
