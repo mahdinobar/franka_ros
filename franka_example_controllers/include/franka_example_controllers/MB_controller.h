@@ -36,6 +36,7 @@ class MBController : public controller_interface::MultiInterfaceController<
   std::array<double, 7> joints_pose_{};
   std::array<double, 16> initial_O_T_EE_{};
   std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_;
+  int idx=0;
 
 };
 
