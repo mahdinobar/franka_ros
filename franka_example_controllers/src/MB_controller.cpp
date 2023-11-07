@@ -219,19 +219,56 @@ void MBController::update(const ros::Time& /*time*/,
       pDbl[i] = double(rand());
     saveArray(pDbl,1000,"/home/mahdi/ETHZ/codes/rl_reach/code/logs/test.txt");
 
-//    std::vector<double> v;
-//    matread("/home/mahdi/ETHZ/codes/rl_reach/code/logs/data_tmp_1kHz.mat", data_tmp_1kHz);
-//    std::cout << "data_tmp_1kHz.size()="<< data_tmp_1kHz.size();
-//    std::cout << std::endl;
-//
-//    Eigen::MatrixXd jacobian_pinv;
+
+    std::ifstream inputfile_r_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.txt");
+    if (!inputfile_r_star.is_open())
+    {
+      std::cout<<"Error reading desired position"<<std::endl;
+    }
+
+    std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log.txt");
+    if (!inputfile_v_star.is_open())
+    {
+      std::cout<<"Error reading desired velocity"<<std::endl;
+    }
+
+    static const int MAX_ROWS = 5175;
+    static const int MAX_COLUMNS = 3;
+    double r_star[MAX_ROWS][MAX_COLUMNS];
+    double v_star[MAX_ROWS][MAX_COLUMNS];
+
+    for (int row = 0; row < MAX_ROWS; ++ row)
+    {
+      std::string row_text_r;
+      std::getline(inputfile_r_star, row_text_r);
+      std::istringstream row_stream_r(row_text_r);
+      std::string row_text_v;
+      std::getline(inputfile_v_star, row_text_v);
+      std::istringstream row_stream_v(row_text_v);
+      for (int column = 0; column < MAX_COLUMNS; ++column)
+      {
+        double number_r;
+        double number_v;
+        char delimiter;
+        row_stream_r >> number_r >> delimiter;
+        r_star[row][column] = number_r;
+        row_stream_v >> number_v >> delimiter;
+        v_star[row][column] = number_v;
+      }
+    }
+
+    //    Eigen::MatrixXd jacobian_pinv;
 //    pseudoInverse(jacobian, jacobian_transpose_pinv);
 //    std::cout << ">>>>>>>>>>>jacobian_pinv="<< jacobian_transpose_pinv;
 //    std::cout << std::endl;
 
-//    double K_p = 50;
+    double K_p = 50;
 //    double ld = 0.1;
-//    e_t = (data_tmp_1kHz_r - EEposition)
+    double *EEpositionc= EEposition.data();
+    Eigen::Map<Eigen::Vector3d>(EEpositionc, EEposition.rows(), EEposition.cols() ) =   EEposition;
+    std::cout << ">>>>>>>>>>>EEpositionc="<< EEpositionc;
+//    double *e_t;
+//    e_t = (r_star[1] - EEpositionc);
 //    e=np.hstack((e, e_t.reshape(3,1)))
 ////    double K_i=50;
 ////    double K_d=1;

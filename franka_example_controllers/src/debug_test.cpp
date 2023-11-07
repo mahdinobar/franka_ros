@@ -7,73 +7,49 @@ int main()
 {
 
 
-  ifstream inputfile("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.txt");
-  if (!inputfile.is_open())
+  ifstream inputfile_r_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.txt");
+  if (!inputfile_r_star.is_open())
   {
-    cout<<"error"<<endl;
+    cout<<"Error reading desired position"<<endl;
   }
 
+  ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log.txt");
+  if (!inputfile_v_star.is_open())
+  {
+    cout<<"Error reading desired velocity"<<endl;
+  }
 
   static const int MAX_ROWS = 5175;
   static const int MAX_COLUMNS = 3;
-  double matrix[MAX_ROWS][MAX_COLUMNS];
-  //...
+  double r_star[MAX_ROWS][MAX_COLUMNS];
+  double v_star[MAX_ROWS][MAX_COLUMNS];
+
   for (int row = 0; row < MAX_ROWS; ++ row)
   {
-      std::string row_text;
-      std::getline(inputfile, row_text);
-      std::istringstream row_stream(row_text);
+      std::string row_text_r;
+      std::getline(inputfile_r_star, row_text_r);
+      std::istringstream row_stream_r(row_text_r);
+      std::string row_text_v;
+      std::getline(inputfile_v_star, row_text_v);
+      std::istringstream row_stream_v(row_text_v);
       for (int column = 0; column < MAX_COLUMNS; ++column)
       {
-        double number;
+        double number_r;
+        double number_v;
         char delimiter;
-        row_stream >> number >> delimiter;
-        matrix[row][column] = number;
+        row_stream_r >> number_r >> delimiter;
+        r_star[row][column] = number_r;
+        row_stream_v >> number_v >> delimiter;
+        v_star[row][column] = number_v;
       }
   }
   for (int r = 0; r < MAX_ROWS; r++) {
     for (int c = 0; c < MAX_COLUMNS; c++) {
-      cout << matrix[r][c] << "\t";
+      cout << r_star[r][c] << "\t";
     }
     cout << endl;
   }
 
-    inputfile.close();
+    inputfile_r_star.close();
     return 0;
   }
-
-
-
-//#include <fstream>
-//#include <iostream>
-//
-//using namespace std;
-//
-//int main() {
-//  int row = 5175;
-//  int col = 3;
-//
-//  double myArray[row][col];
-//
-//  // Opening the file
-//  ifstream inputfile("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.txt", ios::in);
-//
-//  if (!inputfile.is_open()) cout << "Error opening file";
-//
-//  // Defining the loop for getting input from the file
-//
-//  for (int r = 0; r < row; r++)  // Outer loop for rows
-//  {
-//    for (int c = 0; c < col; c++)  // inner loop for columns
-//    {
-//      inputfile >> myArray[r][c];  // Take input from file and put into myArray
-//    }
-//  }
-//
-//  for (int r = 0; r < row; r++) {
-//    for (int c = 0; c < col; c++) {
-//      cout << myArray[r][c] << "\t";
-//    }
-//    cout << endl;
-//  }
-//}
