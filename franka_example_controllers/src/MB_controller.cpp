@@ -156,8 +156,7 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
   std::cout << "dq=" << dq;
   std::cout << std::endl;
-
-
+  
   std::ifstream inputfile_r_star(
       "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.txt");
   if (!inputfile_r_star.is_open()) {
