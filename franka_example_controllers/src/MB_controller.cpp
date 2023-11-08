@@ -109,12 +109,15 @@ void MBController::starting(const ros::Time& /* time */) {
 
 void MBController::update(const ros::Time& /*time*/, const ros::Duration& period) {
   elapsed_time_ += period;
-  std::cout << "period=" << period << " \n";
-  idx += idx;
+  idx += 1;
   double delta_angle = M_PI / 16 * (1 - std::cos(M_PI / 5.0 * elapsed_time_.toSec())) * 0.2;
-  std::cout << "delta_angle=" << delta_angle << " \n";
+  if (idx % 1000 == 0) {
+    std::cout << "idx=" << idx << " \n";
+    std::cout << "period=" << period << " \n";
+    std::cout << "delta_angle=" << delta_angle << " \n";
+  }
   for (size_t i = 0; i < 7; ++i) {
-//    joints_pose_[i] = position_joint_handles_[i].getPosition();
+    //    joints_pose_[i] = position_joint_handles_[i].getPosition();
     if (i == 4) {
       position_joint_handles_[i].setCommand(initial_pose_[i] - delta_angle);
     } else {
@@ -122,116 +125,117 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     }
   }
 
-  // get jacobian
-  std::array<double, 42> jacobian_array =
-      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-
-  franka::RobotState robot_state = state_handle_->getRobotState();
-  //    std::array<double, 16> O_T_EE = robot_state.O_T_EE.data();
-  Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
-  Eigen::Vector3d EEposition(transform.translation());
-  Eigen::Quaterniond orientation(transform.rotation());
-  std::cout << "transform=\n";
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      std::cout << transform(i, j) << " ";
-    }
-    // Newline for new row
-    std::cout << std::endl;
-  }
-  std::cout << "*******1-EEposition=\n";
-  for (int i = 0; i < 3; i++) {
-    std::cout << EEposition(i) << " ";
-    std::cout << std::endl;
-  }
-  std::cout << "orientation_scalar=" << orientation.w();
-  std::cout << std::endl;
-  std::cout << "orientation_vec=" << orientation.vec();
-  std::cout << std::endl;
-
-  Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
-  std::cout << "*******3-q=\n" << q;
-  std::cout << std::endl;
-
-  Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
-  std::cout << "dq=" << dq;
-  std::cout << std::endl;
-  
-  std::ifstream inputfile_r_star(
-      "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.txt");
-  if (!inputfile_r_star.is_open()) {
-    std::cout << "Error reading desired position" << std::endl;
-  }
-
-  std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log.txt");
-  if (!inputfile_v_star.is_open()) {
-    std::cout << "Error reading desired velocity" << std::endl;
-  }
-
-  static const int MAX_ROWS = 5175;
-  static const int MAX_COLUMNS = 3;
-  double r_star[MAX_ROWS][MAX_COLUMNS];
-  double v_star[MAX_ROWS][MAX_COLUMNS];
-
-  for (int row = 0; row < MAX_ROWS; ++row) {
-    std::string row_text_r;
-    std::getline(inputfile_r_star, row_text_r);
-    std::istringstream row_stream_r(row_text_r);
-    std::string row_text_v;
-    std::getline(inputfile_v_star, row_text_v);
-    std::istringstream row_stream_v(row_text_v);
-    for (int column = 0; column < MAX_COLUMNS; ++column) {
-      double number_r;
-      double number_v;
-      char delimiter;
-      row_stream_r >> number_r >> delimiter;
-      r_star[row][column] = number_r;
-      row_stream_v >> number_v >> delimiter;
-      v_star[row][column] = number_v;
-    }
-  }
-
-  double K_p = 50;
-  double e_t[3];
-  e_t[0] = (r_star[idx][0] - EEposition(0));
-  e_t[1] = (r_star[idx][1] - EEposition(1));
-  e_t[2] = (r_star[idx][2] - EEposition(2));
-  std::cout << "e_t[0]=" << e_t[0];
-  std::cout << std::endl;
-  std::cout << "e_t[1]=" << e_t[1];
-  std::cout << std::endl;
-  std::cout << "e_t[2]=" << e_t[2];
-  std::cout << std::endl;
-  //    double K_i=50;
-  //    double K_d=1;
-  double vc[3];
-  vc[0] = v_star[idx][0] + K_p * e_t[0];  //+ K_i * np.sum(e[:,1:],1)*ts + K_d*(v_ref-v_e)
-  vc[1] = v_star[idx][1] + K_p * e_t[1];
-  vc[2] = v_star[idx][2] + K_p * e_t[2];
-
-  Eigen::Map<Eigen::MatrixXd>(vc, 6, 7);
-  Eigen::Vector3d vc_Eigen(vc);
-  Eigen::Vector3d vq(7,1);
-
-
-  Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
-  //    Eigen::Map<const Eigen::Matrix<double, 7, 1>> drdtheta(jacobian*dq);
-  std::cout << "*******2-jacobian*dq=\n";
-  std::cout << jacobian * dq;
-  std::cout << std::endl;
-  std::cout << "jacobian=\n" << jacobian;
-  std::cout << std::endl;
-
-  std::vector<int> ind_translational_jacobian{0,1,2,3};
-  std::vector<int> ind_dof{0,1,2,3,4,5,6};
-  Eigen::Matrix<double, 6, 7> J_translation = jacobian;
-  std::cout << "*******4-J_translation=\n" << J_translation(ind_translational_jacobian,ind_dof);
-//  std::cout << "jacobian_translation=" << jacobian(ind_translational_jacobian,ind_dof);
-//  std::cout << std::endl;
-//  Eigen::MatrixXd jacobian_pinv;
-//  pseudoInverse(jacobian, jacobian_pinv);
-
-//  vq = jacobian_pinv(ind_translational_jacobian,ind_dof)*vc_Eigen;
+  //  // get jacobian
+  //  std::array<double, 42> jacobian_array =
+  //      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  //
+  //  franka::RobotState robot_state = state_handle_->getRobotState();
+  //  //    std::array<double, 16> O_T_EE = robot_state.O_T_EE.data();
+  //  Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
+  //  Eigen::Vector3d EEposition(transform.translation());
+  //  Eigen::Quaterniond orientation(transform.rotation());
+  //  std::cout << "transform=\n";
+  //  for (int i = 0; i < 4; i++) {
+  //    for (int j = 0; j < 4; j++) {
+  //      std::cout << transform(i, j) << " ";
+  //    }
+  //    // Newline for new row
+  //    std::cout << std::endl;
+  //  }
+  //  std::cout << "*******1-EEposition=\n";
+  //  for (int i = 0; i < 3; i++) {
+  //    std::cout << EEposition(i) << " ";
+  //    std::cout << std::endl;
+  //  }
+  //  std::cout << "orientation_scalar=" << orientation.w();
+  //  std::cout << std::endl;
+  //  std::cout << "orientation_vec=" << orientation.vec();
+  //  std::cout << std::endl;
+  //
+  //  Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
+  //  std::cout << "*******3-q=\n" << q;
+  //  std::cout << std::endl;
+  //
+  //  Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
+  //  std::cout << "dq=" << dq;
+  //  std::cout << std::endl;
+  //
+  //  std::ifstream inputfile_r_star(
+  //      "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.txt");
+  //  if (!inputfile_r_star.is_open()) {
+  //    std::cout << "Error reading desired position" << std::endl;
+  //  }
+  //
+  //  std::ifstream
+  //  inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log.txt"); if
+  //  (!inputfile_v_star.is_open()) {
+  //    std::cout << "Error reading desired velocity" << std::endl;
+  //  }
+  //
+  //  static const int MAX_ROWS = 5175;
+  //  static const int MAX_COLUMNS = 3;
+  //  double r_star[MAX_ROWS][MAX_COLUMNS];
+  //  double v_star[MAX_ROWS][MAX_COLUMNS];
+  //
+  //  for (int row = 0; row < MAX_ROWS; ++row) {
+  //    std::string row_text_r;
+  //    std::getline(inputfile_r_star, row_text_r);
+  //    std::istringstream row_stream_r(row_text_r);
+  //    std::string row_text_v;
+  //    std::getline(inputfile_v_star, row_text_v);
+  //    std::istringstream row_stream_v(row_text_v);
+  //    for (int column = 0; column < MAX_COLUMNS; ++column) {
+  //      double number_r;
+  //      double number_v;
+  //      char delimiter;
+  //      row_stream_r >> number_r >> delimiter;
+  //      r_star[row][column] = number_r;
+  //      row_stream_v >> number_v >> delimiter;
+  //      v_star[row][column] = number_v;
+  //    }
+  //  }
+  //
+  //  double K_p = 50;
+  //  double e_t[3];
+  //  e_t[0] = (r_star[idx][0] - EEposition(0));
+  //  e_t[1] = (r_star[idx][1] - EEposition(1));
+  //  e_t[2] = (r_star[idx][2] - EEposition(2));
+  //  std::cout << "e_t[0]=" << e_t[0];
+  //  std::cout << std::endl;
+  //  std::cout << "e_t[1]=" << e_t[1];
+  //  std::cout << std::endl;
+  //  std::cout << "e_t[2]=" << e_t[2];
+  //  std::cout << std::endl;
+  //  //    double K_i=50;
+  //  //    double K_d=1;
+  //  double vc[3];
+  //  vc[0] = v_star[idx][0] + K_p * e_t[0];  //+ K_i * np.sum(e[:,1:],1)*ts + K_d*(v_ref-v_e)
+  //  vc[1] = v_star[idx][1] + K_p * e_t[1];
+  //  vc[2] = v_star[idx][2] + K_p * e_t[2];
+  //
+  //  Eigen::Map<Eigen::MatrixXd>(vc, 6, 7);
+  //  Eigen::Vector3d vc_Eigen(vc);
+  //  Eigen::Vector3d vq(7,1);
+  //
+  //
+  //  Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
+  //  //    Eigen::Map<const Eigen::Matrix<double, 7, 1>> drdtheta(jacobian*dq);
+  //  std::cout << "*******2-jacobian*dq=\n";
+  //  std::cout << jacobian * dq;
+  //  std::cout << std::endl;
+  //  std::cout << "jacobian=\n" << jacobian;
+  //  std::cout << std::endl;
+  //
+  //  std::vector<int> ind_translational_jacobian{0,1,2,3};
+  //  std::vector<int> ind_dof{0,1,2,3,4,5,6};
+  //  Eigen::Matrix<double, 6, 7> J_translation = jacobian;
+  //  std::cout << "*******4-J_translation=\n" << J_translation(ind_translational_jacobian,ind_dof);
+  ////  std::cout << "jacobian_translation=" << jacobian(ind_translational_jacobian,ind_dof);
+  ////  std::cout << std::endl;
+  ////  Eigen::MatrixXd jacobian_pinv;
+  ////  pseudoInverse(jacobian, jacobian_pinv);
+  //
+  ////  vq = jacobian_pinv(ind_translational_jacobian,ind_dof)*vc_Eigen;
 }
 
 }  // namespace franka_example_controllers
