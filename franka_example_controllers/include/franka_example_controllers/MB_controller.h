@@ -14,7 +14,8 @@
 #include <franka_hw/franka_model_interface.h>
 #include <franka_hw/franka_cartesian_command_interface.h>
 #include <Eigen/Dense>
-
+#include <fstream>
+#include <iostream>
 
 namespace franka_example_controllers {
 
