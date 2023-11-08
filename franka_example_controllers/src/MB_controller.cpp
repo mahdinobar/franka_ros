@@ -207,14 +207,12 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     std::cout << std::endl;
     //    double K_i=50;
     //    double K_d=1;
-    double vc[3];
-    vc[0] = v_star[idx][0] + K_p * e_t[0];  //+ K_i * np.sum(e[:,1:],1)*ts + K_d*(v_ref-v_e)
-    vc[1] = v_star[idx][1] + K_p * e_t[1];
-    vc[2] = v_star[idx][2] + K_p * e_t[2];
+    Eigen::Vector<double, 3> vc;
+    vc(0) = v_star[idx][0] + K_p * e_t[0];  //+ K_i * np.sum(e[:,1:],1)*ts + K_d*(v_ref-v_e)
+    vc(1) = v_star[idx][1] + K_p * e_t[1];
+    vc(2) = v_star[idx][2] + K_p * e_t[2];
 
-    Eigen::Map<Eigen::MatrixXd>(vc, 6, 7);
-    Eigen::Vector3d vc_Eigen(vc);
-    Eigen::Vector3d vq(7, 1);
+//    Eigen::Map<Eigen::MatrixXd>(vc, 6, 7);
 
     Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
     //    Eigen::Map<const Eigen::Matrix<double, 7, 1>> drdtheta(jacobian*dq);
@@ -226,13 +224,17 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
 
     std::vector<int> ind_translational_jacobian{0, 1, 2, 3};
     std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
-    Eigen::Matrix<double, 6, 7> J_translation = jacobian;
-    std::cout << "*******4-J_translation=\n" << J_translation(ind_translational_jacobian, ind_dof);
+    Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
+    std::cout << "*******4-J_translation=\n" << J_translation;//(ind_translational_jacobian, ind_dof);
     std::cout << std::endl;
-    Eigen::MatrixXd jacobian_pinv;
-    pseudoInverse(jacobian, jacobian_pinv);
-
-    vq = jacobian_pinv * vc_Eigen;
+    Eigen::MatrixXd J_translation_pinv;
+    pseudoInverse(J_translation, J_translation_pinv);
+    std::cout << "J_translation_pinv=\n" << J_translation_pinv;
+    std::cout << std::endl;
+    std::cout << "vc=\n" << vc;
+    std::cout << std::endl;
+    Eigen::Matrix<double, 7, 1> vq;
+    vq = J_translation_pinv * vc;
     std::cout << "=======vq=\n" << vq;
     std::cout << std::endl;
   }
