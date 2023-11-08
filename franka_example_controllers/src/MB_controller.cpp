@@ -107,21 +107,14 @@ void MBController::starting(const ros::Time& /* time */) {
   elapsed_time_ = ros::Duration(0.0);
 }
 
-// std::array<double, 7> dq_c(q, x_e, v_e, r_traj[k,:].T, v_traj[k,:].T,e,ts)
-//{
-//   if (x > y)
-//     return x;
-//   else
-//     return y;
-// }
 void MBController::update(const ros::Time& /*time*/, const ros::Duration& period) {
   elapsed_time_ += period;
-  std::cout << "period=" << period << " ***\n";
+  std::cout << "period=" << period << " \n";
   idx += idx;
   double delta_angle = M_PI / 16 * (1 - std::cos(M_PI / 5.0 * elapsed_time_.toSec())) * 0.2;
-  std::cout << "delta_angle=" << delta_angle << " ***\n";
+  std::cout << "delta_angle=" << delta_angle << " \n";
   for (size_t i = 0; i < 7; ++i) {
-    joints_pose_[i] = position_joint_handles_[i].getPosition();
+//    joints_pose_[i] = position_joint_handles_[i].getPosition();
     if (i == 4) {
       position_joint_handles_[i].setCommand(initial_pose_[i] - delta_angle);
     } else {
@@ -129,47 +122,16 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     }
   }
 
-  std::cout << "joints_pose_=";
-  for (int j = 0; j < 7; j++) {
-    std::cout << joints_pose_[j] << "\t";
-  }
-  std::cout << "***\n";
-
   // get jacobian
   std::array<double, 42> jacobian_array =
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-  //  std::cout << ">>>>>>>>>>>>>>>jacobian_array=\n";
-  //    for (int i = 0; i < 6; i++)
-  //    {
-  //      for (int j = 0; j < 7; j++)
-  //      {
-  //        std::cout << jacobian_array[i,j] << " ";
-  //      }
-  //
-  //      // Newline for new row
-  //      std::cout << std::endl;
-  //    }
-
-  //    // Gets the 4x4 pose matrix for the given frame in base frame, calculated from the current
-  //    robot state. std::array<double, 16> O_T_EE_ =
-  //    model_handle_->getPose(franka::Frame::kEndEffector); std::cout <<
-  //    "@@@@@@@@@@@@@@@@@@O_T_EE_=\n"; for (int i = 0; i < 4; i++)
-  //    {
-  //      for (int j = 0; j < 4; j++)
-  //      {
-  //        std::cout << O_T_EE_[i,j] << " ";
-  //      }
-  //
-  //      // Newline for new row
-  //      std::cout << std::endl;
-  //    }
 
   franka::RobotState robot_state = state_handle_->getRobotState();
   //    std::array<double, 16> O_T_EE = robot_state.O_T_EE.data();
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
   Eigen::Vector3d EEposition(transform.translation());
   Eigen::Quaterniond orientation(transform.rotation());
-  std::cout << "**********transform=\n";
+  std::cout << "transform=\n";
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
       std::cout << transform(i, j) << " ";
@@ -177,18 +139,18 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     // Newline for new row
     std::cout << std::endl;
   }
-  std::cout << "**EEposition=\n";
+  std::cout << "*******1-EEposition=\n";
   for (int i = 0; i < 3; i++) {
     std::cout << EEposition(i) << " ";
     std::cout << std::endl;
   }
-  std::cout << "*orientation_scalar=" << orientation.w();
+  std::cout << "orientation_scalar=" << orientation.w();
   std::cout << std::endl;
-  std::cout << "*orientation_vec=" << orientation.vec();
+  std::cout << "orientation_vec=" << orientation.vec();
   std::cout << std::endl;
 
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
-  std::cout << "q=" << q;
+  std::cout << "*******3-q=\n" << q;
   std::cout << std::endl;
 
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
@@ -231,19 +193,15 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
   }
 
   double K_p = 50;
-  //    double ld = 0.1;
-  //    double *EEpositionc= EEposition.data();
-  //    Eigen::Map<Eigen::Vector3d>(EEpositionc, EEposition.rows(), EEposition.cols() ) =
-  //    EEposition; std::cout << ">>>>>>>>>>>EEpositionc="<< EEpositionc;
   double e_t[3];
   e_t[0] = (r_star[idx][0] - EEposition(0));
   e_t[1] = (r_star[idx][1] - EEposition(1));
   e_t[2] = (r_star[idx][2] - EEposition(2));
-  std::cout << ">>>>>>>>>>>e_t[0]=" << e_t[0];
+  std::cout << "e_t[0]=" << e_t[0];
   std::cout << std::endl;
-  std::cout << ">>>>>>>>>>>e_t[1]=" << e_t[1];
+  std::cout << "e_t[1]=" << e_t[1];
   std::cout << std::endl;
-  std::cout << ">>>>>>>>>>>e_t[2]=" << e_t[2];
+  std::cout << "e_t[2]=" << e_t[2];
   std::cout << std::endl;
   //    double K_i=50;
   //    double K_d=1;
@@ -251,8 +209,7 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
   vc[0] = v_star[idx][0] + K_p * e_t[0];  //+ K_i * np.sum(e[:,1:],1)*ts + K_d*(v_ref-v_e)
   vc[1] = v_star[idx][1] + K_p * e_t[1];
   vc[2] = v_star[idx][2] + K_p * e_t[2];
-//  double vq[3];
-//  Eigen::Map<Eigen::Matrix<double, 6, 7>> vc_eig(vc);
+
   Eigen::Map<Eigen::MatrixXd>(vc, 6, 7);
   Eigen::Vector3d vc_Eigen(vc);
   Eigen::Vector3d vq(7,1);
@@ -260,20 +217,16 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
 
   Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
   //    Eigen::Map<const Eigen::Matrix<double, 7, 1>> drdtheta(jacobian*dq);
-  std::cout << "jacobian*dq=\n";
+  std::cout << "*******2-jacobian*dq=\n";
   std::cout << jacobian * dq;
   std::cout << std::endl;
   std::cout << "jacobian=\n" << jacobian;
   std::cout << std::endl;
 
-//  Eigen::Map<Eigen::Matrix<double, 3, 7>> jacobian_translation(jacobian_array.data());
-//  std::cout << "jacobian_translation=" << jacobian_translation;
-
-
   std::vector<int> ind_translational_jacobian{0,1,2,3};
   std::vector<int> ind_dof{0,1,2,3,4,5,6};
-  Eigen::Matrix<double, 6, 7> Jcopy = jacobian;
-    std::cout << "Jcopy=" << Jcopy(ind_translational_jacobian,ind_dof);
+  Eigen::Matrix<double, 6, 7> J_translation = jacobian;
+  std::cout << "*******4-J_translation=\n" << J_translation(ind_translational_jacobian,ind_dof);
 //  std::cout << "jacobian_translation=" << jacobian(ind_translational_jacobian,ind_dof);
 //  std::cout << std::endl;
 //  Eigen::MatrixXd jacobian_pinv;
