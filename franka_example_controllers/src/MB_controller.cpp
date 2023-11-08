@@ -155,8 +155,8 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
       position_joint_handles_[i].setCommand(initial_pose_[i] + delta_angle);
     }
   }
-  if (idx % 3000 == 0) {
-    std::cout << "idx=" << idx << " \n";
+  if (idx % 2000 == 0) {
+    std::cout << "################################idx=" << idx << " \n";
     std::cout << "period=" << period << " \n";
     std::cout << "delta_angle=" << delta_angle << " \n";
     // get jacobian
@@ -212,7 +212,7 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     vc(1) = v_star[idx][1] + K_p * e_t[1];
     vc(2) = v_star[idx][2] + K_p * e_t[2];
 
-//    Eigen::Map<Eigen::MatrixXd>(vc, 6, 7);
+    //    Eigen::Map<Eigen::MatrixXd>(vc, 6, 7);
 
     Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
     //    Eigen::Map<const Eigen::Matrix<double, 7, 1>> drdtheta(jacobian*dq);
@@ -225,7 +225,8 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     std::vector<int> ind_translational_jacobian{0, 1, 2, 3};
     std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
     Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
-    std::cout << "*******4-J_translation=\n" << J_translation;//(ind_translational_jacobian, ind_dof);
+    std::cout << "*******4-J_translation=\n"
+              << J_translation;  //(ind_translational_jacobian, ind_dof);
     std::cout << std::endl;
     Eigen::MatrixXd J_translation_pinv;
     pseudoInverse(J_translation, J_translation_pinv);
@@ -238,6 +239,15 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     std::cout << "=======vq=\n" << vq;
     std::cout << std::endl;
   }
+  if (idx > 6000) {
+    MBController::stopRequest(ros::Time::now());
+  }
+}
+
+void MBController::stopping(const ros::Time& /*time*/) {
+  // WARNING: DO NOT SEND ZERO VELOCITIES HERE AS IN CASE OF ABORTING DURING MOTION
+  // A JUMP TO ZERO WILL BE COMMANDED PUTTING HIGH LOADS ON THE ROBOT. LET THE DEFAULT
+  // BUILT-IN STOPPING BEHAVIOR SLOW DOWN THE ROBOT.
 }
 
 }  // namespace franka_example_controllers

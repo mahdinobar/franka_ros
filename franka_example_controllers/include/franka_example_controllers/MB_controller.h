@@ -27,8 +27,10 @@ class MBController : public controller_interface::MultiInterfaceController<
   bool init(hardware_interface::RobotHW* robot_hardware, ros::NodeHandle& node_handle) override;
   void starting(const ros::Time&) override;
   void update(const ros::Time&, const ros::Duration& period) override;
+  void stopping(const ros::Time&) override;
+//  void stopRequest(const ros::Time&  time);
 
- private:
+      private:
   hardware_interface::PositionJointInterface* position_joint_interface_;
   std::vector<hardware_interface::JointHandle> position_joint_handles_;
   std::unique_ptr<franka_hw::FrankaModelHandle> model_handle_;
