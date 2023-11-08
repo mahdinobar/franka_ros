@@ -107,12 +107,12 @@ void MBController::starting(const ros::Time& /* time */) {
   elapsed_time_ = ros::Duration(0.0);
 }
 
-//define global vars
+// define global vars
 static const int Target_Traj_ROWS = 5175;
 static const int Target_Traj_COLUMNS = 3;
 double r_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
 double v_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
-//load data into the global vars
+// load data into the global vars
 void load_target_trajectory() {
   std::ifstream inputfile_r_star(
       "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.txt");
@@ -228,12 +228,13 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
     Eigen::Matrix<double, 6, 7> J_translation = jacobian;
     std::cout << "*******4-J_translation=\n" << J_translation(ind_translational_jacobian, ind_dof);
-    //  std::cout << "jacobian_translation=" << jacobian(ind_translational_jacobian,ind_dof);
-    //  std::cout << std::endl;
-    //  Eigen::MatrixXd jacobian_pinv;
-    //  pseudoInverse(jacobian, jacobian_pinv);
+    std::cout << std::endl;
+    Eigen::MatrixXd jacobian_pinv;
+    pseudoInverse(jacobian, jacobian_pinv);
 
-    //  vq = jacobian_pinv(ind_translational_jacobian,ind_dof)*vc_Eigen;
+    vq = jacobian_pinv * vc_Eigen;
+    std::cout << "=======vq=\n" << vq;
+    std::cout << std::endl;
   }
 }
 
