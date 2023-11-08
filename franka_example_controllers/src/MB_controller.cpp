@@ -260,21 +260,24 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
 
   Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
   //    Eigen::Map<const Eigen::Matrix<double, 7, 1>> drdtheta(jacobian*dq);
-  std::cout << "jacobian*dq=" << jacobian * dq;
+  std::cout << "jacobian*dq=\n";
+  std::cout << jacobian * dq;
   std::cout << std::endl;
-  std::cout << "jacobian=" << jacobian;
+  std::cout << "jacobian=\n" << jacobian;
   std::cout << std::endl;
 
 //  Eigen::Map<Eigen::Matrix<double, 3, 7>> jacobian_translation(jacobian_array.data());
 //  std::cout << "jacobian_translation=" << jacobian_translation;
 
 
-  std::vector<int> ind_translational_jacobian{1,2,3};
-  std::vector<int> ind_dof{1,2,3,4,5,6};
-  std::cout << "jacobian_translation=" << jacobian(ind_translational_jacobian,ind_dof);
-  std::cout << std::endl;
-  Eigen::MatrixXd jacobian_pinv;
-  pseudoInverse(jacobian, jacobian_pinv);
+  std::vector<int> ind_translational_jacobian{0,1,2,3};
+  std::vector<int> ind_dof{0,1,2,3,4,5,6};
+  Eigen::Matrix<double, 6, 7> Jcopy = jacobian;
+    std::cout << "Jcopy=" << Jcopy(ind_translational_jacobian,ind_dof);
+//  std::cout << "jacobian_translation=" << jacobian(ind_translational_jacobian,ind_dof);
+//  std::cout << std::endl;
+//  Eigen::MatrixXd jacobian_pinv;
+//  pseudoInverse(jacobian, jacobian_pinv);
 
 //  vq = jacobian_pinv(ind_translational_jacobian,ind_dof)*vc_Eigen;
 }
