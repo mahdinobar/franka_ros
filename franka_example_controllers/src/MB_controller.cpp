@@ -215,7 +215,7 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     std::cout << "jacobian=\n" << jacobian;
     std::cout << std::endl;
 
-    std::vector<int> ind_translational_jacobian{0, 1, 2, 3};
+    std::vector<int> ind_translational_jacobian{0, 1, 2};
     std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
     Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
     std::cout << "*******4-J_translation=\n"
