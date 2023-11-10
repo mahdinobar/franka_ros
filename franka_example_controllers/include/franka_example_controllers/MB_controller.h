@@ -40,6 +40,11 @@ class MBController : public controller_interface::MultiInterfaceController<
   std::array<double, 16> initial_O_T_EE_{};
   std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_;
   int idx=0;
+  int idx_out=0;
+  Eigen::Matrix<double, 7, 1> vq={0,0,0,0,0,0,0};
+  Eigen::Vector3d EEposition;
+  std::array<double, 3> I_e={0,0,0};
+
 
 };
 
