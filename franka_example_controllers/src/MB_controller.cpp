@@ -115,11 +115,11 @@ double v_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
 // load data into the global vars
 void load_target_trajectory() {
   std::ifstream inputfile_r_star(
-      "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.txt");
+      "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log_b.txt");
   if (!inputfile_r_star.is_open()) {
     std::cout << "Error reading desired position" << std::endl;
   }
-  std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log.txt");
+  std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log_b.txt");
   if (!inputfile_v_star.is_open()) {
     std::cout << "Error reading desired velocity" << std::endl;
   }
@@ -143,7 +143,7 @@ void load_target_trajectory() {
 }
 
 void MBController::update(const ros::Time& /*time*/, const ros::Duration& period) {
-  int mp = 10;
+  int mp = 4;
   double ts = 0.001 * mp;
 
   if (idx_out % mp == 0) {
@@ -185,7 +185,8 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     std::cout << "dq=" << dq;
     std::cout << std::endl;
 
-    double K_p = 50;
+    double K_p = 0.04;
+    double K_i = 0.04;
     double e_t[3];
     e_t[0] = (r_star[idx][0] - EEposition(0));
     e_t[1] = (r_star[idx][1] - EEposition(1));
@@ -196,7 +197,6 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     std::cout << std::endl;
     std::cout << "e_t[2]=" << e_t[2];
     std::cout << std::endl;
-    double K_i = 50;
     Eigen::Vector<double, 3> vc;
     //    double K_d=1;
     for (int i = 0; i < 3; ++i) {
