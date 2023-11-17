@@ -38,7 +38,7 @@ class MBController : public controller_interface::MultiInterfaceController<
   std::array<double, 7> initial_pose_{};
   std::array<double, 7> joints_pose_{};
   std::array<double, 16> initial_O_T_EE_{};
-  std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_;
+  std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_; //seems to be franka_states
   int idx=0;
   int idx_out=0;
   Eigen::Matrix<double, 7, 1> vq={0,0,0,0,0,0,0};

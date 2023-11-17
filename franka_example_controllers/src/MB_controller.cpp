@@ -185,7 +185,7 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     std::cout << "dq=" << dq;
     std::cout << std::endl;
 
-    double K_p = 0.1;
+    double K_p = 50;
     double e_t[3];
     e_t[0] = (r_star[idx][0] - EEposition(0));
     e_t[1] = (r_star[idx][1] - EEposition(1));
@@ -196,7 +196,7 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     std::cout << std::endl;
     std::cout << "e_t[2]=" << e_t[2];
     std::cout << std::endl;
-    double K_i = 0.1;
+    double K_i = 50;
     Eigen::Vector<double, 3> vc;
     //    double K_d=1;
     for (int i = 0; i < 3; ++i) {
