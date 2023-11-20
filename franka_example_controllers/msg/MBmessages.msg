@@ -1,1 +1,1 @@
-float64[42] jacobian_array
+float64[3] r_star

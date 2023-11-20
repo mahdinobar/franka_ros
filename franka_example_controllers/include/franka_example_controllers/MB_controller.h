@@ -50,7 +50,7 @@ class MBController : public controller_interface::MultiInterfaceController<
   Eigen::Vector3d EEposition;
   std::array<double, 3> I_e={0,0,0};
   franka_hw::TriggerRate rate_trigger_{1.0};
-  realtime_tools::RealtimePublisher<MBmessages> torques_publisher_;
+  realtime_tools::RealtimePublisher<MBmessages> MB_publisher_;
 
 };
 

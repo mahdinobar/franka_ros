@@ -15,11 +15,70 @@
 #include <iostream>
 #include <vector>
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include "/usr/local/MATLAB/R2023b/extern/include/mat.h"
 
 namespace franka_example_controllers {
+
+void matread(const char* file, std::vector<double>& v) {
+  // open MAT-file
+  MATFile* pmat = matOpen(file, "r");
+  if (pmat == NULL)
+    return;
+
+  // extract the specified variable
+  mxArray* arr = matGetVariable(pmat, "LocalDouble");
+  if (arr != NULL && mxIsDouble(arr) && !mxIsEmpty(arr)) {
+    // copy data
+    mwSize num = mxGetNumberOfElements(arr);
+    double* pr = mxGetPr(arr);
+    if (pr != NULL) {
+      v.reserve(num);  // is faster than resize :-)
+      v.assign(pr, pr + num);
+    }
+  }
+  // cleanup
+  mxDestroyArray(arr);
+  matClose(pmat);
+}
+// define global vars
+static const int Target_Traj_ROWS = 5175;
+static const int Target_Traj_COLUMNS = 3;
+float r_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
+float v_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
+// load data into the global vars
+void load_target_trajectory() {
+  std::ifstream inputfile_r_star(
+      "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log_b.txt");
+  if (!inputfile_r_star.is_open()) {
+    std::cout << "Error reading desired position" << std::endl;
+  }
+  std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log_b.txt");
+  if (!inputfile_v_star.is_open()) {
+    std::cout << "Error reading desired velocity" << std::endl;
+  }
+  for (int row = 0; row < Target_Traj_ROWS; ++row) {
+    std::string row_text_r;
+    std::getline(inputfile_r_star, row_text_r);
+    std::istringstream row_stream_r(row_text_r);
+    std::string row_text_v;
+    std::getline(inputfile_v_star, row_text_v);
+    std::istringstream row_stream_v(row_text_v);
+    for (int column = 0; column < Target_Traj_COLUMNS; ++column) {
+      double number_r;
+      double number_v;
+      char delimiter;
+      row_stream_r >> number_r >> delimiter;
+      r_star[row][column] = number_r;
+      row_stream_v >> number_v >> delimiter;
+      v_star[row][column] = number_v;
+    }
+  }
+}
 
 bool MBController::init(hardware_interface::RobotHW* robot_hardware, ros::NodeHandle& node_handle) {
   position_joint_interface_ = robot_hardware->get<hardware_interface::PositionJointInterface>();
@@ -78,8 +137,7 @@ bool MBController::init(hardware_interface::RobotHW* robot_hardware, ros::NodeHa
     ROS_ERROR_STREAM("MBController: Exception getting state handle from interface: " << ex.what());
     return false;
   }
-  torques_publisher_.init(node_handle, "MB_messages", 1);
-
+  MB_publisher_.init(node_handle, "MB_messages", 1);
   return true;
 }
 
@@ -105,63 +163,33 @@ void MBController::starting(const ros::Time& /* time */) {
   for (size_t i = 0; i < 7; ++i) {
     initial_pose_[i] = position_joint_handles_[i].getPosition();
   }
+//  std::vector<double> v_test;
+//  matread("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.mat", v_test);
+//  std::cout << "Hi!!!!!!!!!!" << std::endl;
+//  for (size_t i = 0; i < v_test.size(); ++i)
+//    std::cout << v_test[i] << std::endl;
+  load_target_trajectory();
   initial_O_T_EE_ = model_handle_->getPose(franka::Frame::kEndEffector);
   elapsed_time_ = ros::Duration(0.0);
-}
-
-// define global vars
-static const int Target_Traj_ROWS = 5175;
-static const int Target_Traj_COLUMNS = 3;
-double r_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
-double v_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
-// load data into the global vars
-void load_target_trajectory() {
-  std::ifstream inputfile_r_star(
-      "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log_b.txt");
-  if (!inputfile_r_star.is_open()) {
-    std::cout << "Error reading desired position" << std::endl;
-  }
-  std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log_b.txt");
-  if (!inputfile_v_star.is_open()) {
-    std::cout << "Error reading desired velocity" << std::endl;
-  }
-  for (int row = 0; row < Target_Traj_ROWS; ++row) {
-    std::string row_text_r;
-    std::getline(inputfile_r_star, row_text_r);
-    std::istringstream row_stream_r(row_text_r);
-    std::string row_text_v;
-    std::getline(inputfile_v_star, row_text_v);
-    std::istringstream row_stream_v(row_text_v);
-    for (int column = 0; column < Target_Traj_COLUMNS; ++column) {
-      double number_r;
-      double number_v;
-      char delimiter;
-      row_stream_r >> number_r >> delimiter;
-      r_star[row][column] = number_r;
-      row_stream_v >> number_v >> delimiter;
-      v_star[row][column] = number_v;
-    }
-  }
 }
 
 void MBController::update(const ros::Time& /*time*/, const ros::Duration& period) {
   int mp = 4;
   double ts = 0.001 * mp;
 
+  // get jacobian
+  std::array<double, 42> jacobian_array =
+      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
+  std::vector<int> ind_translational_jacobian{0, 1, 2};
+  std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
+  Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
+  Eigen::MatrixXd J_translation_pinv;
+
   if (idx_out % mp == 0) {
     elapsed_time_ += period;
     std::cout << "**************************************************idx=" << idx << " \n";
     std::cout << "period=" << period << " \n";
-    // get jacobian
-    std::array<double, 42> jacobian_array =
-        model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-
-    if (rate_trigger_() && torques_publisher_.trylock()) {
-      for (size_t i = 0; i < 42; ++i) {
-        torques_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
-      }
-      torques_publisher_.unlockAndPublish();
-    }
 
     franka::RobotState robot_state = state_handle_->getRobotState();
     //    std::array<double, 16> O_T_EE = robot_state.O_T_EE.data();
@@ -200,6 +228,8 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     e_t[0] = (r_star[idx][0] - EEposition(0));
     e_t[1] = (r_star[idx][1] - EEposition(1));
     e_t[2] = (r_star[idx][2] - EEposition(2));
+    std::cout << "@@@@@@@@@r_star[idx][0]=" << r_star[idx][0];
+    std::cout << std::endl;
     std::cout << "e_t[0]=" << e_t[0];
     std::cout << std::endl;
     std::cout << "e_t[1]=" << e_t[1];
@@ -216,21 +246,15 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
 
     //    Eigen::Map<Eigen::MatrixXd>(vc, 6, 7);
 
-    Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
-    //    Eigen::Map<const Eigen::Matrix<double, 7, 1>> drdtheta(jacobian*dq);
     std::cout << "*******2-jacobian*dq=\n";
     std::cout << jacobian * dq;
     std::cout << std::endl;
     std::cout << "jacobian=\n" << jacobian;
     std::cout << std::endl;
 
-    std::vector<int> ind_translational_jacobian{0, 1, 2};
-    std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
-    Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
     std::cout << "*******4-J_translation=\n"
               << J_translation;  //(ind_translational_jacobian, ind_dof);
     std::cout << std::endl;
-    Eigen::MatrixXd J_translation_pinv;
     pseudoInverse(J_translation, J_translation_pinv);
     std::cout << "J_translation_pinv=\n" << J_translation_pinv;
     std::cout << std::endl;
@@ -250,11 +274,42 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     for (size_t i = 0; i < 7; ++i) {
       joints_pose_[i] = position_joint_handles_[i].getPosition();
     }
+//    if (rate_trigger_() && MB_publisher_.trylock()) {
+//      for (size_t i = 0; i < 3; ++i) {
+//        MB_publisher_.msg_.r_star[i] = r_star[idx][i];
+//        //        MB_publisher_.msg_.v_star[i] = v_star[idx][i];
+//        //      MB_publisher_.msg_.EEposition[i] = EEposition(i);
+//      }
+//      MB_publisher_.unlockAndPublish();
+//    }
   }
   std::cout << "+++++++++++++++++++++++++++++++++++idx=" << idx << " \n";
-  std::cout << "!!!!!!!!vq* ts=\n" << vq * ts;
+  std::cout << "!vq* ts=\n" << vq * ts;
   std::cout << std::endl;
 
+  //  if (rate_trigger_() && MB_publisher_.trylock()) {
+  //    for (size_t i = 0; i < 42; ++i) {
+  //      MB_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
+  //    }
+  //    MB_publisher_.unlockAndPublish();
+  //  }
+  //  if (rate_trigger_() && MB_publisher_.trylock()) {
+  //    for (size_t i = 0; i < 6; ++i) {
+  //      for (size_t j = 0; i < 7; ++j) {
+  //        MB_publisher_.msg_.jacobian[i] = jacobian(i,j);
+  //      }
+  //    }
+  //    MB_publisher_.unlockAndPublish();
+  //  }
+  //  if (rate_trigger_() && MB_publisher_.trylock()) {
+  //    for (size_t i = 0; i < 3; ++i) {
+  //      for (size_t j = 0; j < 7; ++j) {
+  //        MB_publisher_.msg_.J_translation[i*3+j] = J_translation(i,j);
+  //        MB_publisher_.msg_.J_translation_pinv[i*3+j] = J_translation_pinv(i,j);
+  //      }
+  //    }
+  //    MB_publisher_.unlockAndPublish();
+  //  }
   for (size_t i = 0; i < 7; ++i) {
     position_joint_handles_[i].setCommand(joints_pose_[i] + vq(i) * ts);
   }
