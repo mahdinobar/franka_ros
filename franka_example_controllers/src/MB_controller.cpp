@@ -163,11 +163,11 @@ void MBController::starting(const ros::Time& /* time */) {
   for (size_t i = 0; i < 7; ++i) {
     initial_pose_[i] = position_joint_handles_[i].getPosition();
   }
-//  std::vector<double> v_test;
-//  matread("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.mat", v_test);
-//  std::cout << "Hi!!!!!!!!!!" << std::endl;
-//  for (size_t i = 0; i < v_test.size(); ++i)
-//    std::cout << v_test[i] << std::endl;
+  //  std::vector<double> v_test;
+  //  matread("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.mat", v_test);
+  //  std::cout << "Hi!!!!!!!!!!" << std::endl;
+  //  for (size_t i = 0; i < v_test.size(); ++i)
+  //    std::cout << v_test[i] << std::endl;
   load_target_trajectory();
   initial_O_T_EE_ = model_handle_->getPose(franka::Frame::kEndEffector);
   elapsed_time_ = ros::Duration(0.0);
@@ -277,8 +277,8 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     if (rate_trigger_() && MB_publisher_.trylock()) {
       for (size_t i = 0; i < 3; ++i) {
         MB_publisher_.msg_.r_star[i] = r_star[idx][i];
-        //        MB_publisher_.msg_.v_star[i] = v_star[idx][i];
-        //      MB_publisher_.msg_.EEposition[i] = EEposition(i);
+        MB_publisher_.msg_.v_star[i] = v_star[idx][i];
+        MB_publisher_.msg_.EEposition[i] = EEposition(i);
       }
       MB_publisher_.unlockAndPublish();
     }
