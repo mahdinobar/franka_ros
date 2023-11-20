@@ -78,6 +78,8 @@ bool MBController::init(hardware_interface::RobotHW* robot_hardware, ros::NodeHa
     ROS_ERROR_STREAM("MBController: Exception getting state handle from interface: " << ex.what());
     return false;
   }
+  torques_publisher_.init(node_handle, "MB_messages", 1);
+
   return true;
 }
 
@@ -153,6 +155,13 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     // get jacobian
     std::array<double, 42> jacobian_array =
         model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+
+    if (rate_trigger_() && torques_publisher_.trylock()) {
+      for (size_t i = 0; i < 42; ++i) {
+        torques_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
+      }
+      torques_publisher_.unlockAndPublish();
+    }
 
     franka::RobotState robot_state = state_handle_->getRobotState();
     //    std::array<double, 16> O_T_EE = robot_state.O_T_EE.data();

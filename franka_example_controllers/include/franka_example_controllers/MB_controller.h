@@ -16,6 +16,11 @@
 #include <Eigen/Dense>
 #include <fstream>
 #include <iostream>
+#include <franka_hw/trigger_rate.h>
+#include <realtime_tools/realtime_publisher.h>
+#include <franka_example_controllers/MBmessages.h>
+
+
 
 namespace franka_example_controllers {
 
@@ -44,7 +49,8 @@ class MBController : public controller_interface::MultiInterfaceController<
   Eigen::Matrix<double, 7, 1> vq={0,0,0,0,0,0,0};
   Eigen::Vector3d EEposition;
   std::array<double, 3> I_e={0,0,0};
-
+  franka_hw::TriggerRate rate_trigger_{1.0};
+  realtime_tools::RealtimePublisher<MBmessages> torques_publisher_;
 
 };
 
