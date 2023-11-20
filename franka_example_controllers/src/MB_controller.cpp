@@ -274,14 +274,14 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     for (size_t i = 0; i < 7; ++i) {
       joints_pose_[i] = position_joint_handles_[i].getPosition();
     }
-//    if (rate_trigger_() && MB_publisher_.trylock()) {
-//      for (size_t i = 0; i < 3; ++i) {
-//        MB_publisher_.msg_.r_star[i] = r_star[idx][i];
-//        //        MB_publisher_.msg_.v_star[i] = v_star[idx][i];
-//        //      MB_publisher_.msg_.EEposition[i] = EEposition(i);
-//      }
-//      MB_publisher_.unlockAndPublish();
-//    }
+    if (rate_trigger_() && MB_publisher_.trylock()) {
+      for (size_t i = 0; i < 3; ++i) {
+        MB_publisher_.msg_.r_star[i] = r_star[idx][i];
+        //        MB_publisher_.msg_.v_star[i] = v_star[idx][i];
+        //      MB_publisher_.msg_.EEposition[i] = EEposition(i);
+      }
+      MB_publisher_.unlockAndPublish();
+    }
   }
   std::cout << "+++++++++++++++++++++++++++++++++++idx=" << idx << " \n";
   std::cout << "!vq* ts=\n" << vq * ts;
