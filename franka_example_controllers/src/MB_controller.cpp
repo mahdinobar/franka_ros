@@ -163,21 +163,14 @@ void MBController::starting(const ros::Time& /* time */) {
   for (size_t i = 0; i < 7; ++i) {
     initial_pose_[i] = position_joint_handles_[i].getPosition();
   }
-  //  std::vector<double> v_test;
-  //  matread("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.mat", v_test);
-  //  std::cout << "Hi!!!!!!!!!!" << std::endl;
-  //  for (size_t i = 0; i < v_test.size(); ++i)
-  //    std::cout << v_test[i] << std::endl;
   load_target_trajectory();
   initial_O_T_EE_ = model_handle_->getPose(franka::Frame::kEndEffector);
   elapsed_time_ = ros::Duration(0.0);
 }
 
 void MBController::update(const ros::Time& /*time*/, const ros::Duration& period) {
-  int mp = 4;
+  int mp = 1;
   double ts = 0.001 * mp;
-
-  // get jacobian
   std::array<double, 42> jacobian_array =
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
   Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
@@ -188,54 +181,24 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
 
   if (idx_out % mp == 0) {
     elapsed_time_ += period;
-    std::cout << "**************************************************idx=" << idx << " \n";
-    std::cout << "period=" << period << " \n";
-
     franka::RobotState robot_state = state_handle_->getRobotState();
-    //    std::array<double, 16> O_T_EE = robot_state.O_T_EE.data();
     Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
     Eigen::Vector3d EEposition(transform.translation());
     Eigen::Quaterniond orientation(transform.rotation());
-    std::cout << "transform=\n";
     for (int i = 0; i < 4; i++) {
       for (int j = 0; j < 4; j++) {
         std::cout << transform(i, j) << " ";
       }
-      // Newline for new row
       std::cout << std::endl;
     }
-    std::cout << "*******1-EEposition=\n";
-    for (int i = 0; i < 3; i++) {
-      std::cout << EEposition(i) << " ";
-      std::cout << std::endl;
-    }
-    //    std::cout << "orientation_scalar=" << orientation.w();
-    //    std::cout << std::endl;
-    //    std::cout << "orientation_vec=" << orientation.vec();
-    //    std::cout << std::endl;
-
     Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
-    std::cout << "*******3-q=\n" << q;
-    std::cout << std::endl;
-
     Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
-    std::cout << "dq=" << dq;
-    std::cout << std::endl;
-
-    double K_p = 0.04;
-    double K_i = 0.04;
+    double K_p = 40;
+    double K_i = 40;
     double e_t[3];
     e_t[0] = (r_star[idx][0] - EEposition(0));
     e_t[1] = (r_star[idx][1] - EEposition(1));
     e_t[2] = (r_star[idx][2] - EEposition(2));
-    std::cout << "@@@@@@@@@r_star[idx][0]=" << r_star[idx][0];
-    std::cout << std::endl;
-    std::cout << "e_t[0]=" << e_t[0];
-    std::cout << std::endl;
-    std::cout << "e_t[1]=" << e_t[1];
-    std::cout << std::endl;
-    std::cout << "e_t[2]=" << e_t[2];
-    std::cout << std::endl;
     Eigen::Vector<double, 3> vc;
     //    double K_d=1;
     for (int i = 0; i < 3; ++i) {
@@ -243,77 +206,101 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
       vc(i) = v_star[idx][i] + K_p * e_t[i] +
               K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*ts + K_d*(v_ref-v_e)
     }
-
-    //    Eigen::Map<Eigen::MatrixXd>(vc, 6, 7);
-
-    std::cout << "*******2-jacobian*dq=\n";
-    std::cout << jacobian * dq;
-    std::cout << std::endl;
-    std::cout << "jacobian=\n" << jacobian;
-    std::cout << std::endl;
-
-    std::cout << "*******4-J_translation=\n"
-              << J_translation;  //(ind_translational_jacobian, ind_dof);
-    std::cout << std::endl;
     pseudoInverse(J_translation, J_translation_pinv);
-    std::cout << "J_translation_pinv=\n" << J_translation_pinv;
-    std::cout << std::endl;
-    std::cout << "vc=\n" << vc;
-    std::cout << std::endl;
-    //    Eigen::Matrix<double, 7, 1> vq;
     vq = J_translation_pinv * vc;
-    std::cout << "vq=\n" << vq;
-    std::cout << std::endl;
-
     if (idx > Target_Traj_ROWS) {
       MBController::stopRequest(ros::Time::now());
     }
     //  TODO should idx be updated here or end of call?
     idx += 1;
-    //    TODO check joints_pose_ updates and i.c. is correct
-    for (size_t i = 0; i < 7; ++i) {
-      joints_pose_[i] = position_joint_handles_[i].getPosition();
-    }
-    if (rate_trigger_() && MB_publisher_.trylock()) {
-      for (size_t i = 0; i < 3; ++i) {
-        MB_publisher_.msg_.r_star[i] = r_star[idx][i];
-        MB_publisher_.msg_.v_star[i] = v_star[idx][i];
-        MB_publisher_.msg_.EEposition[i] = EEposition(i);
+    if (debug) {
+      std::cout << "**************************************************idx=" << idx << " \n";
+      std::cout << "period=" << period << " \n";
+      std::cout << "transform=\n";
+      std::cout << "*******1-EEposition=\n";
+      for (int i = 0; i < 3; i++) {
+        std::cout << EEposition(i) << " ";
+        std::cout << std::endl;
       }
-      MB_publisher_.unlockAndPublish();
+      std::cout << "*******3-q=\n" << q;
+      std::cout << std::endl;
+      std::cout << "dq=" << dq;
+      std::cout << std::endl;
+      std::cout << "@@@@@@@@@r_star[idx][0]=" << r_star[idx][0];
+      std::cout << std::endl;
+      std::cout << "e_t[0]=" << e_t[0];
+      std::cout << std::endl;
+      std::cout << "e_t[1]=" << e_t[1];
+      std::cout << std::endl;
+      std::cout << "e_t[2]=" << e_t[2];
+      std::cout << std::endl;
+      std::cout << "*******2-jacobian*dq=\n";
+      std::cout << jacobian * dq;
+      std::cout << std::endl;
+      std::cout << "jacobian=\n" << jacobian;
+      std::cout << std::endl;
+      std::cout << "*******4-J_translation=\n" << J_translation;
+      std::cout << std::endl;
+      std::cout << "J_translation_pinv=\n" << J_translation_pinv;
+      std::cout << std::endl;
+      std::cout << "vc=\n" << vc;
+      std::cout << std::endl;
+      std::cout << "vq=\n" << vq;
+      std::cout << std::endl;
+      //    TODO check joints_pose_ updates and i.c. is correct
+      for (size_t i = 0; i < 7; ++i) {
+        joints_pose_[i] = position_joint_handles_[i].getPosition();
+      }
+      if (rate_trigger_() && MB_publisher_.trylock()) {
+        for (size_t i = 0; i < 3; ++i) {
+          MB_publisher_.msg_.r_star[i] = r_star[idx][i];
+          MB_publisher_.msg_.v_star[i] = v_star[idx][i];
+          MB_publisher_.msg_.EEposition[i] = EEposition(i);
+        }
+        MB_publisher_.unlockAndPublish();
+      }
+      if (rate_trigger_() && MB_publisher_.trylock()) {
+        for (size_t i = 0; i < 42; ++i) {
+          MB_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
+        }
+        MB_publisher_.unlockAndPublish();
+      }
+      if (rate_trigger_() && MB_publisher_.trylock()) {
+        for (size_t i = 0; i < 6; ++i) {
+          for (size_t j = 0; i < 7; ++j) {
+            MB_publisher_.msg_.jacobian[i] = jacobian(i, j);
+          }
+        }
+        MB_publisher_.unlockAndPublish();
+      }
+      if (rate_trigger_() && MB_publisher_.trylock()) {
+        for (size_t i = 0; i < 3; ++i) {
+          for (size_t j = 0; j < 7; ++j) {
+            MB_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
+            MB_publisher_.msg_.J_translation_pinv[i * 3 + j] = J_translation_pinv(i, j);
+          }
+        }
+        MB_publisher_.unlockAndPublish();
+      }
     }
   }
-  std::cout << "+++++++++++++++++++++++++++++++++++idx=" << idx << " \n";
-  std::cout << "!vq* ts=\n" << vq * ts;
-  std::cout << std::endl;
-
-  //  if (rate_trigger_() && MB_publisher_.trylock()) {
-  //    for (size_t i = 0; i < 42; ++i) {
-  //      MB_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
-  //    }
-  //    MB_publisher_.unlockAndPublish();
-  //  }
-  //  if (rate_trigger_() && MB_publisher_.trylock()) {
-  //    for (size_t i = 0; i < 6; ++i) {
-  //      for (size_t j = 0; i < 7; ++j) {
-  //        MB_publisher_.msg_.jacobian[i] = jacobian(i,j);
-  //      }
-  //    }
-  //    MB_publisher_.unlockAndPublish();
-  //  }
-  //  if (rate_trigger_() && MB_publisher_.trylock()) {
-  //    for (size_t i = 0; i < 3; ++i) {
-  //      for (size_t j = 0; j < 7; ++j) {
-  //        MB_publisher_.msg_.J_translation[i*3+j] = J_translation(i,j);
-  //        MB_publisher_.msg_.J_translation_pinv[i*3+j] = J_translation_pinv(i,j);
-  //      }
-  //    }
-  //    MB_publisher_.unlockAndPublish();
-  //  }
   for (size_t i = 0; i < 7; ++i) {
     position_joint_handles_[i].setCommand(joints_pose_[i] + vq(i) * ts);
   }
+
   idx_out += 1;
+  if (rate_trigger_() && MB_publisher_.trylock()) {
+    for (size_t i = 0; i < 7; ++i) {
+      MB_publisher_.msg_.q_c[i] = joints_pose_[i] + vq(i) * ts;
+    }
+    MB_publisher_.unlockAndPublish();
+  }
+
+  if (debug) {
+    std::cout << "+++++++++++++++++++++++++++++++++++idx=" << idx << " \n";
+    std::cout << "!vq* ts=\n" << vq * ts;
+    std::cout << std::endl;
+  }
 }
 
 void MBController::stopping(const ros::Time& /*time*/) {

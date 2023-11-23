@@ -51,6 +51,7 @@ class MBController : public controller_interface::MultiInterfaceController<
   std::array<double, 3> I_e={0,0,0};
   franka_hw::TriggerRate rate_trigger_{1.0};
   realtime_tools::RealtimePublisher<MBmessages> MB_publisher_;
+  const bool debug=false;
 
 };
 
