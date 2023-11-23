@@ -24,72 +24,6 @@
 
 namespace franka_example_controllers {
 
-//void matread(const char* file, std::vector<double>& v) {
-//  // open MAT-file
-//  MATFile* pmat = matOpen(file, "r");
-//  if (pmat == NULL)
-//    return;
-//
-//  // extract the specified variable
-//  mxArray* arr = matGetVariable(pmat, "LocalDouble");
-//  if (arr != NULL && mxIsDouble(arr) && !mxIsEmpty(arr)) {
-//    // copy data
-//    mwSize num = mxGetNumberOfElements(arr);
-//    double* pr = mxGetPr(arr);
-//    if (pr != NULL) {
-//      v.reserve(num);  // is faster than resize :-)
-//      v.assign(pr, pr + num);
-//    }
-//  }
-//  // cleanup
-//  mxDestroyArray(arr);
-//  matClose(pmat);
-//}
-// load data into the global vars
-//void PRIMITIVE_load_target_trajectory() {
-//  std::ifstream inputfile_r_star(
-//      "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log_b.txt");
-//  if (!inputfile_r_star.is_open()) {
-//    std::cout << "Error reading desired position" << std::endl;
-//  }
-//  std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log_b.txt");
-//  if (!inputfile_v_star.is_open()) {
-//    std::cout << "Error reading desired velocity" << std::endl;
-//  }
-//  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/q_log.txt");
-//  if (!inputfile_q_star.is_open()) {
-//    std::cout << "Error reading q_log file" << std::endl;
-//  }
-//  for (int row = 0; row < Target_Traj_ROWS; ++row) {
-//    std::string row_text_r;
-//    std::getline(inputfile_r_star, row_text_r);
-//    std::istringstream row_stream_r(row_text_r);
-//    std::string row_text_v;
-//    std::getline(inputfile_v_star, row_text_v);
-//    std::istringstream row_stream_v(row_text_v);
-//    for (int column = 0; column < Target_Traj_COLUMNS; ++column) {
-//      double number_r;
-//      double number_v;
-//      char delimiter;
-//      row_stream_r >> number_r >> delimiter;
-//      r_star[row][column] = number_r;
-//      row_stream_v >> number_v >> delimiter;
-//      v_star[row][column] = number_v;
-//    }
-//  }
-//  for (int row = 0; row < Target_Traj_ROWS; ++row) {
-//    std::string row_text_q;
-//    std::getline(inputfile_r_star, row_text_q);
-//    std::istringstream row_stream_q(row_text_q);
-//    for (int column = 0; column < 9; ++column) {
-//      double number_q;
-//      char delimiter;
-//      row_stream_q >> number_q >> delimiter;
-//      q_star[row][column] = number_q;
-//    }
-//  }
-//}
-
 bool PRIMITIVEController::init(hardware_interface::RobotHW* robot_hardware, ros::NodeHandle& node_handle) {
   position_joint_interface_ = robot_hardware->get<hardware_interface::PositionJointInterface>();
   if (position_joint_interface_ == nullptr) {
@@ -155,36 +89,9 @@ void PRIMITIVEController::starting(const ros::Time& /* time */) {
   for (size_t i = 0; i < 7; ++i) {
     initial_pose_[i] = position_joint_handles_[i].getPosition();
   }
-//  PRIMITIVE_load_target_trajectory();
-  std::ifstream inputfile_r_star(
-      "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log_b.txt");
-  if (!inputfile_r_star.is_open()) {
-    std::cout << "Error reading desired position" << std::endl;
-  }
-  std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log_b.txt");
-  if (!inputfile_v_star.is_open()) {
-    std::cout << "Error reading desired velocity" << std::endl;
-  }
-  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/q_log.txt");
+  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/q_log_b.txt");
   if (!inputfile_q_star.is_open()) {
     std::cout << "Error reading q_log file" << std::endl;
-  }
-  for (int row = 0; row < Target_Traj_ROWS; ++row) {
-    std::string row_text_r;
-    std::getline(inputfile_r_star, row_text_r);
-    std::istringstream row_stream_r(row_text_r);
-    std::string row_text_v;
-    std::getline(inputfile_v_star, row_text_v);
-    std::istringstream row_stream_v(row_text_v);
-    for (int column = 0; column < Target_Traj_COLUMNS; ++column) {
-      double number_r;
-      double number_v;
-      char delimiter;
-      row_stream_r >> number_r >> delimiter;
-      r_star[row][column] = number_r;
-      row_stream_v >> number_v >> delimiter;
-      v_star[row][column] = number_v;
-    }
   }
   for (int row = 0; row < Target_Traj_ROWS; ++row) {
     std::string row_text_q;
