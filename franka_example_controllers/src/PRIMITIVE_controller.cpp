@@ -210,108 +210,14 @@ void PRIMITIVEController::update(const ros::Time& /*time*/, const ros::Duration&
   }
   if (idx_out % mp == 0) {
     elapsed_time_ += period;
-    std::array<double, 42> jacobian_array =
-        model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-    Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
-    std::vector<int> ind_translational_jacobian{0, 1, 2};
-    std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
-    Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
-    Eigen::MatrixXd J_translation_pinv;
+    //  TODO should idx be updated here or end of call?
+    idx += 1;
     franka::RobotState robot_state = state_handle_->getRobotState();
     Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
     Eigen::Vector3d EEposition(transform.translation());
-    Eigen::Quaterniond orientation(transform.rotation());
-    for (int i = 0; i < 4; i++) {
-      for (int j = 0; j < 4; j++) {
-        std::cout << transform(i, j) << " ";
-      }
-      std::cout << std::endl;
-    }
-    Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
-    Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
-    double K_p = 40;
-    double K_i = 40;
-    double e_t[3];
-    e_t[0] = (r_star[idx][0] - EEposition(0));
-    e_t[1] = (r_star[idx][1] - EEposition(1));
-    e_t[2] = (r_star[idx][2] - EEposition(2));
-    Eigen::Vector<double, 3> vc;
-    //    double K_d=1;
-    for (int i = 0; i < 3; ++i) {
-      I_e[i] += e_t[i] * ts;
-      vc(i) = v_star[idx][i] + K_p * e_t[i] +
-              K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*ts + K_d*(v_ref-v_e)
-    }
-    pseudoInverse(J_translation, J_translation_pinv);
-    vq = J_translation_pinv * vc;
-    if (idx > Target_Traj_ROWS) {
-      PRIMITIVEController::stopRequest(ros::Time::now());
-    }
-    //  TODO should idx be updated here or end of call?
-    idx += 1;
-    if (debug) {
-      std::cout << "**************************************************idx=" << idx << " \n";
-      std::cout << "period=" << period << " \n";
-      std::cout << "transform=\n";
-      std::cout << "*******1-EEposition=\n";
-      for (int i = 0; i < 3; i++) {
-        std::cout << EEposition(i) << " ";
-        std::cout << std::endl;
-      }
-      std::cout << "*******3-q=\n" << q;
-      std::cout << std::endl;
-      std::cout << "dq=" << dq;
-      std::cout << std::endl;
-      std::cout << "@@@@@@@@@r_star[idx][0]=" << r_star[idx][0];
-      std::cout << std::endl;
-      std::cout << "e_t[0]=" << e_t[0];
-      std::cout << std::endl;
-      std::cout << "e_t[1]=" << e_t[1];
-      std::cout << std::endl;
-      std::cout << "e_t[2]=" << e_t[2];
-      std::cout << std::endl;
-      std::cout << "*******2-jacobian*dq=\n";
-      std::cout << jacobian * dq;
-      std::cout << std::endl;
-      std::cout << "jacobian=\n" << jacobian;
-      std::cout << std::endl;
-      std::cout << "*******4-J_translation=\n" << J_translation;
-      std::cout << std::endl;
-      std::cout << "J_translation_pinv=\n" << J_translation_pinv;
-      std::cout << std::endl;
-      std::cout << "vc=\n" << vc;
-      std::cout << std::endl;
-      std::cout << "vq=\n" << vq;
-      std::cout << std::endl;
-      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-        for (size_t i = 0; i < 42; ++i) {
-          PRIMITIVE_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
-        }
-        PRIMITIVE_publisher_.unlockAndPublish();
-      }
-      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-        for (size_t i = 0; i < 6; ++i) {
-          for (size_t j = 0; i < 7; ++j) {
-            PRIMITIVE_publisher_.msg_.jacobian[i] = jacobian(i, j);
-          }
-        }
-        PRIMITIVE_publisher_.unlockAndPublish();
-      }
-      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-        for (size_t i = 0; i < 3; ++i) {
-          for (size_t j = 0; j < 7; ++j) {
-            PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
-            PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] = J_translation_pinv(i, j);
-          }
-        }
-        PRIMITIVE_publisher_.unlockAndPublish();
-      }
-    }
   }
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
     for (size_t i = 0; i < 3; ++i) {
-      PRIMITIVE_publisher_.msg_.r_star[i] = r_star[idx][i];
-      PRIMITIVE_publisher_.msg_.v_star[i] = v_star[idx][i];
       PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
     }
     PRIMITIVE_publisher_.unlockAndPublish();
