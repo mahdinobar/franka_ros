@@ -188,7 +188,7 @@ void PRIMITIVEController::starting(const ros::Time& /* time */) {
   }
   for (int row = 0; row < Target_Traj_ROWS; ++row) {
     std::string row_text_q;
-    std::getline(inputfile_r_star, row_text_q);
+    std::getline(inputfile_q_star, row_text_q);
     std::istringstream row_stream_q(row_text_q);
     for (int column = 0; column < 9; ++column) {
       double number_q;
