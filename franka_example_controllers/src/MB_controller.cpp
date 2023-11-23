@@ -178,7 +178,10 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
   std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
   Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
   Eigen::MatrixXd J_translation_pinv;
-
+  //    TODO check joints_pose_ updates and i.c. is correct
+  for (size_t i = 0; i < 7; ++i) {
+    joints_pose_[i] = position_joint_handles_[i].getPosition();
+  }
   if (idx_out % mp == 0) {
     elapsed_time_ += period;
     franka::RobotState robot_state = state_handle_->getRobotState();
@@ -247,10 +250,6 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
       std::cout << std::endl;
       std::cout << "vq=\n" << vq;
       std::cout << std::endl;
-      //    TODO check joints_pose_ updates and i.c. is correct
-      for (size_t i = 0; i < 7; ++i) {
-        joints_pose_[i] = position_joint_handles_[i].getPosition();
-      }
       if (rate_trigger_() && MB_publisher_.trylock()) {
         for (size_t i = 0; i < 3; ++i) {
           MB_publisher_.msg_.r_star[i] = r_star[idx][i];
