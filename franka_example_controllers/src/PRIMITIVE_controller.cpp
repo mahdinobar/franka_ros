@@ -1,6 +1,6 @@
 // Copyright (c) 2017 Franka Emika GmbH
 // Use of this source code is governed by the Apache-2.0 license, see LICENSE
-#include <franka_example_controllers/MB_controller.h>
+#include <franka_example_controllers/PRIMITIVE_controller.h>
 
 #include <cmath>
 
@@ -96,18 +96,18 @@ void load_target_trajectory() {
   }
 }
 
-bool MBController::init(hardware_interface::RobotHW* robot_hardware, ros::NodeHandle& node_handle) {
+bool PRIMITIVEController::init(hardware_interface::RobotHW* robot_hardware, ros::NodeHandle& node_handle) {
   position_joint_interface_ = robot_hardware->get<hardware_interface::PositionJointInterface>();
   if (position_joint_interface_ == nullptr) {
-    ROS_ERROR("MBController: Error getting position joint interface from hardware!");
+    ROS_ERROR("PRIMITIVEController: Error getting position joint interface from hardware!");
     return false;
   }
   std::vector<std::string> joint_names;
   if (!node_handle.getParam("joint_names", joint_names)) {
-    ROS_ERROR("MBController: Could not parse joint names");
+    ROS_ERROR("PRIMITIVEController: Could not parse joint names");
   }
   if (joint_names.size() != 7) {
-    ROS_ERROR_STREAM("MBController: Wrong number of joint names, got " << joint_names.size()
+    ROS_ERROR_STREAM("PRIMITIVEController: Wrong number of joint names, got " << joint_names.size()
                                                                        << " instead of 7 names!");
     return false;
   }
@@ -116,7 +116,7 @@ bool MBController::init(hardware_interface::RobotHW* robot_hardware, ros::NodeHa
     try {
       position_joint_handles_[i] = position_joint_interface_->getHandle(joint_names[i]);
     } catch (const hardware_interface::HardwareInterfaceException& e) {
-      ROS_ERROR_STREAM("MBController: Exception getting joint handles: " << e.what());
+      ROS_ERROR_STREAM("PRIMITIVEController: Exception getting joint handles: " << e.what());
       return false;
     }
   }
@@ -126,7 +126,7 @@ bool MBController::init(hardware_interface::RobotHW* robot_hardware, ros::NodeHa
   for (size_t i = 0; i < q_start.size(); i++) {
     if (std::abs(position_joint_handles_[i].getPosition() - q_start[i]) > 0.1) {
       ROS_ERROR_STREAM(
-          "MBController: Robot is not in the expected starting position for "
+          "PRIMITIVEController: Robot is not in the expected starting position for "
           "running this example. Run `roslaunch franka_example_controllers move_to_start.launch "
           "robot_ip:=<robot-ip> load_gripper:=<has-attached-gripper>` first.");
       return false;
@@ -142,7 +142,7 @@ bool MBController::init(hardware_interface::RobotHW* robot_hardware, ros::NodeHa
     model_handle_ =
         std::make_unique<franka_hw::FrankaModelHandle>(model_interface->getHandle("panda_model"));
   } catch (hardware_interface::HardwareInterfaceException& ex) {
-    ROS_ERROR_STREAM("MBController: Exception getting model handle from interface: " << ex.what());
+    ROS_ERROR_STREAM("PRIMITIVEController: Exception getting model handle from interface: " << ex.what());
     return false;
   }
   auto* state_interface = robot_hardware->get<franka_hw::FrankaStateInterface>();
@@ -150,10 +150,10 @@ bool MBController::init(hardware_interface::RobotHW* robot_hardware, ros::NodeHa
     state_handle_ =
         std::make_unique<franka_hw::FrankaStateHandle>(state_interface->getHandle("panda_robot"));
   } catch (hardware_interface::HardwareInterfaceException& ex) {
-    ROS_ERROR_STREAM("MBController: Exception getting state handle from interface: " << ex.what());
+    ROS_ERROR_STREAM("PRIMITIVEController: Exception getting state handle from interface: " << ex.what());
     return false;
   }
-  MB_publisher_.init(node_handle, "MB_messages", 1);
+  PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1);
   return true;
 }
 
@@ -175,7 +175,7 @@ bool loadArray(double* pdata, size_t length, const std::string& file_path) {
   return true;
 }
 
-void MBController::starting(const ros::Time& /* time */) {
+void PRIMITIVEController::starting(const ros::Time& /* time */) {
   for (size_t i = 0; i < 7; ++i) {
     initial_pose_[i] = position_joint_handles_[i].getPosition();
   }
@@ -184,7 +184,7 @@ void MBController::starting(const ros::Time& /* time */) {
   elapsed_time_ = ros::Duration(0.0);
 }
 
-void MBController::update(const ros::Time& /*time*/, const ros::Duration& period) {
+void PRIMITIVEController::update(const ros::Time& /*time*/, const ros::Duration& period) {
   int mp = 4;
   double ts = 0.001 * mp;
   //    TODO check joints_pose_ updates and i.c. is correct
@@ -228,7 +228,7 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     pseudoInverse(J_translation, J_translation_pinv);
     vq = J_translation_pinv * vc;
     if (idx > Target_Traj_ROWS) {
-      MBController::stopRequest(ros::Time::now());
+      PRIMITIVEController::stopRequest(ros::Time::now());
     }
     //  TODO should idx be updated here or end of call?
     idx += 1;
@@ -266,49 +266,49 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
       std::cout << std::endl;
       std::cout << "vq=\n" << vq;
       std::cout << std::endl;
-      if (rate_trigger_() && MB_publisher_.trylock()) {
+      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
         for (size_t i = 0; i < 42; ++i) {
-          MB_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
+          PRIMITIVE_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
         }
-        MB_publisher_.unlockAndPublish();
+        PRIMITIVE_publisher_.unlockAndPublish();
       }
-      if (rate_trigger_() && MB_publisher_.trylock()) {
+      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
         for (size_t i = 0; i < 6; ++i) {
           for (size_t j = 0; i < 7; ++j) {
-            MB_publisher_.msg_.jacobian[i] = jacobian(i, j);
+            PRIMITIVE_publisher_.msg_.jacobian[i] = jacobian(i, j);
           }
         }
-        MB_publisher_.unlockAndPublish();
+        PRIMITIVE_publisher_.unlockAndPublish();
       }
-      if (rate_trigger_() && MB_publisher_.trylock()) {
+      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
         for (size_t i = 0; i < 3; ++i) {
           for (size_t j = 0; j < 7; ++j) {
-            MB_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
-            MB_publisher_.msg_.J_translation_pinv[i * 3 + j] = J_translation_pinv(i, j);
+            PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
+            PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] = J_translation_pinv(i, j);
           }
         }
-        MB_publisher_.unlockAndPublish();
+        PRIMITIVE_publisher_.unlockAndPublish();
       }
     }
   }
-  if (rate_trigger_() && MB_publisher_.trylock()) {
+  if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
     for (size_t i = 0; i < 3; ++i) {
-      MB_publisher_.msg_.r_star[i] = r_star[idx][i];
-      MB_publisher_.msg_.v_star[i] = v_star[idx][i];
-      MB_publisher_.msg_.EEposition[i] = EEposition(i);
+      PRIMITIVE_publisher_.msg_.r_star[i] = r_star[idx][i];
+      PRIMITIVE_publisher_.msg_.v_star[i] = v_star[idx][i];
+      PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
     }
-    MB_publisher_.unlockAndPublish();
+    PRIMITIVE_publisher_.unlockAndPublish();
   }
   for (size_t i = 0; i < 7; ++i) {
-//    position_joint_handles_[i].setCommand(joints_pose_[i] + vq(i) * ts);
+    //    position_joint_handles_[i].setCommand(joints_pose_[i] + vq(i) * ts);
     position_joint_handles_[i].setCommand(q_star[idx][i]);
   }
   idx_out += 1;
-  if (rate_trigger_() && MB_publisher_.trylock()) {
+  if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
     for (size_t i = 0; i < 7; ++i) {
-      MB_publisher_.msg_.q_c[i] = joints_pose_[i] + vq(i) * ts;
+      PRIMITIVE_publisher_.msg_.q_c[i] = joints_pose_[i] + vq(i) * ts;
     }
-    MB_publisher_.unlockAndPublish();
+    PRIMITIVE_publisher_.unlockAndPublish();
   }
 
   if (debug) {
@@ -318,7 +318,7 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
   }
 }
 
-void MBController::stopping(const ros::Time& /*time*/) {
+void PRIMITIVEController::stopping(const ros::Time& /*time*/) {
   // WARNING: DO NOT SEND ZERO VELOCITIES HERE AS IN CASE OF ABORTING DURING MOTION
   // A JUMP TO ZERO WILL BE COMMANDED PUTTING HIGH LOADS ON THE ROBOT. LET THE DEFAULT
   // BUILT-IN STOPPING BEHAVIOR SLOW DOWN THE ROBOT.
@@ -326,5 +326,5 @@ void MBController::stopping(const ros::Time& /*time*/) {
 
 }  // namespace franka_example_controllers
 
-PLUGINLIB_EXPORT_CLASS(franka_example_controllers::MBController,
+PLUGINLIB_EXPORT_CLASS(franka_example_controllers::PRIMITIVEController,
                        controller_interface::ControllerBase)

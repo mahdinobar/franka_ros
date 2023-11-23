@@ -14,6 +14,11 @@
       A controller that executes a motion based on joint positions to demonstrate our model-based controller
     </description>
   </class>
+  <class name="franka_example_controllers/PRIMITIVEController" type="franka_example_controllers::PRIMITIVEController" base_class_type="controller_interface::ControllerBase">
+    <description>
+      A controller that executes primitive experiments to analyze the resources
+    </description>
+  </class>
   <class name="franka_example_controllers/CartesianPoseExampleController" type="franka_example_controllers::CartesianPoseExampleController" base_class_type="controller_interface::ControllerBase">
     <description>
       A controller that executes a short motion based on cartesian poses to demonstrate correct usage
