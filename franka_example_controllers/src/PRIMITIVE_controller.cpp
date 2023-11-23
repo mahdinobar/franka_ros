@@ -24,7 +24,8 @@
 
 namespace franka_example_controllers {
 
-bool PRIMITIVEController::init(hardware_interface::RobotHW* robot_hardware, ros::NodeHandle& node_handle) {
+bool PRIMITIVEController::init(hardware_interface::RobotHW* robot_hardware,
+                               ros::NodeHandle& node_handle) {
   position_joint_interface_ = robot_hardware->get<hardware_interface::PositionJointInterface>();
   if (position_joint_interface_ == nullptr) {
     ROS_ERROR("PRIMITIVEController: Error getting position joint interface from hardware!");
@@ -35,8 +36,8 @@ bool PRIMITIVEController::init(hardware_interface::RobotHW* robot_hardware, ros:
     ROS_ERROR("PRIMITIVEController: Could not parse joint names");
   }
   if (joint_names.size() != 7) {
-    ROS_ERROR_STREAM("PRIMITIVEController: Wrong number of joint names, got " << joint_names.size()
-                                                                       << " instead of 7 names!");
+    ROS_ERROR_STREAM("PRIMITIVEController: Wrong number of joint names, got "
+                     << joint_names.size() << " instead of 7 names!");
     return false;
   }
   position_joint_handles_.resize(7);
@@ -70,7 +71,8 @@ bool PRIMITIVEController::init(hardware_interface::RobotHW* robot_hardware, ros:
     model_handle_ =
         std::make_unique<franka_hw::FrankaModelHandle>(model_interface->getHandle("panda_model"));
   } catch (hardware_interface::HardwareInterfaceException& ex) {
-    ROS_ERROR_STREAM("PRIMITIVEController: Exception getting model handle from interface: " << ex.what());
+    ROS_ERROR_STREAM(
+        "PRIMITIVEController: Exception getting model handle from interface: " << ex.what());
     return false;
   }
   auto* state_interface = robot_hardware->get<franka_hw::FrankaStateInterface>();
@@ -78,7 +80,8 @@ bool PRIMITIVEController::init(hardware_interface::RobotHW* robot_hardware, ros:
     state_handle_ =
         std::make_unique<franka_hw::FrankaStateHandle>(state_interface->getHandle("panda_robot"));
   } catch (hardware_interface::HardwareInterfaceException& ex) {
-    ROS_ERROR_STREAM("PRIMITIVEController: Exception getting state handle from interface: " << ex.what());
+    ROS_ERROR_STREAM(
+        "PRIMITIVEController: Exception getting state handle from interface: " << ex.what());
     return false;
   }
   PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1);
@@ -102,6 +105,8 @@ void PRIMITIVEController::starting(const ros::Time& /* time */) {
       char delimiter;
       row_stream_q >> number_q >> delimiter;
       q_star[row][column] = number_q;
+      std::cout << q_star[row][column] << " ";
+      std::cout << std::endl;
     }
   }
   initial_O_T_EE_ = model_handle_->getPose(franka::Frame::kEndEffector);
@@ -130,7 +135,6 @@ void PRIMITIVEController::update(const ros::Time& /*time*/, const ros::Duration&
     PRIMITIVE_publisher_.unlockAndPublish();
   }
   for (size_t i = 0; i < 7; ++i) {
-    //    position_joint_handles_[i].setCommand(joints_pose_[i] + vq(i) * ts);
     position_joint_handles_[i].setCommand(q_star[idx][i]);
   }
   idx_out += 1;
