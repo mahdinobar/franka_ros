@@ -169,7 +169,7 @@ void MBController::starting(const ros::Time& /* time */) {
 }
 
 void MBController::update(const ros::Time& /*time*/, const ros::Duration& period) {
-  int mp = 10;
+  int mp = 4;
   double ts = 0.001 * mp;
   std::array<double, 42> jacobian_array =
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
