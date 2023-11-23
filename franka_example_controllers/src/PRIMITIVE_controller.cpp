@@ -24,77 +24,71 @@
 
 namespace franka_example_controllers {
 
-void matread(const char* file, std::vector<double>& v) {
-  // open MAT-file
-  MATFile* pmat = matOpen(file, "r");
-  if (pmat == NULL)
-    return;
-
-  // extract the specified variable
-  mxArray* arr = matGetVariable(pmat, "LocalDouble");
-  if (arr != NULL && mxIsDouble(arr) && !mxIsEmpty(arr)) {
-    // copy data
-    mwSize num = mxGetNumberOfElements(arr);
-    double* pr = mxGetPr(arr);
-    if (pr != NULL) {
-      v.reserve(num);  // is faster than resize :-)
-      v.assign(pr, pr + num);
-    }
-  }
-  // cleanup
-  mxDestroyArray(arr);
-  matClose(pmat);
-}
-// define global vars
-static const int Target_Traj_ROWS = 5175;
-static const int Target_Traj_COLUMNS = 3;
-float r_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
-float v_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
-float q_star[Target_Traj_ROWS][9];
+//void matread(const char* file, std::vector<double>& v) {
+//  // open MAT-file
+//  MATFile* pmat = matOpen(file, "r");
+//  if (pmat == NULL)
+//    return;
+//
+//  // extract the specified variable
+//  mxArray* arr = matGetVariable(pmat, "LocalDouble");
+//  if (arr != NULL && mxIsDouble(arr) && !mxIsEmpty(arr)) {
+//    // copy data
+//    mwSize num = mxGetNumberOfElements(arr);
+//    double* pr = mxGetPr(arr);
+//    if (pr != NULL) {
+//      v.reserve(num);  // is faster than resize :-)
+//      v.assign(pr, pr + num);
+//    }
+//  }
+//  // cleanup
+//  mxDestroyArray(arr);
+//  matClose(pmat);
+//}
 // load data into the global vars
-void load_target_trajectory() {
-  std::ifstream inputfile_r_star(
-      "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log_b.txt");
-  if (!inputfile_r_star.is_open()) {
-    std::cout << "Error reading desired position" << std::endl;
-  }
-  std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log_b.txt");
-  if (!inputfile_v_star.is_open()) {
-    std::cout << "Error reading desired velocity" << std::endl;
-  }
-  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/q_log.txt");
-  if (!inputfile_q_star.is_open()) {
-    std::cout << "Error reading q_log file" << std::endl;
-  }
-  for (int row = 0; row < Target_Traj_ROWS; ++row) {
-    std::string row_text_r;
-    std::getline(inputfile_r_star, row_text_r);
-    std::istringstream row_stream_r(row_text_r);
-    std::string row_text_v;
-    std::getline(inputfile_v_star, row_text_v);
-    std::istringstream row_stream_v(row_text_v);
-    for (int column = 0; column < Target_Traj_COLUMNS; ++column) {
-      double number_r;
-      double number_v;
-      char delimiter;
-      row_stream_r >> number_r >> delimiter;
-      r_star[row][column] = number_r;
-      row_stream_v >> number_v >> delimiter;
-      v_star[row][column] = number_v;
-    }
-  }
-  for (int row = 0; row < Target_Traj_ROWS; ++row) {
-    std::string row_text_q;
-    std::getline(inputfile_r_star, row_text_q);
-    std::istringstream row_stream_q(row_text_q);
-    for (int column = 0; column < 9; ++column) {
-      double number_q;
-      char delimiter;
-      row_stream_q >> number_q >> delimiter;
-      q_star[row][column] = number_q;
-    }
-  }
-}
+//void PRIMITIVE_load_target_trajectory() {
+//  std::ifstream inputfile_r_star(
+//      "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log_b.txt");
+//  if (!inputfile_r_star.is_open()) {
+//    std::cout << "Error reading desired position" << std::endl;
+//  }
+//  std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log_b.txt");
+//  if (!inputfile_v_star.is_open()) {
+//    std::cout << "Error reading desired velocity" << std::endl;
+//  }
+//  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/q_log.txt");
+//  if (!inputfile_q_star.is_open()) {
+//    std::cout << "Error reading q_log file" << std::endl;
+//  }
+//  for (int row = 0; row < Target_Traj_ROWS; ++row) {
+//    std::string row_text_r;
+//    std::getline(inputfile_r_star, row_text_r);
+//    std::istringstream row_stream_r(row_text_r);
+//    std::string row_text_v;
+//    std::getline(inputfile_v_star, row_text_v);
+//    std::istringstream row_stream_v(row_text_v);
+//    for (int column = 0; column < Target_Traj_COLUMNS; ++column) {
+//      double number_r;
+//      double number_v;
+//      char delimiter;
+//      row_stream_r >> number_r >> delimiter;
+//      r_star[row][column] = number_r;
+//      row_stream_v >> number_v >> delimiter;
+//      v_star[row][column] = number_v;
+//    }
+//  }
+//  for (int row = 0; row < Target_Traj_ROWS; ++row) {
+//    std::string row_text_q;
+//    std::getline(inputfile_r_star, row_text_q);
+//    std::istringstream row_stream_q(row_text_q);
+//    for (int column = 0; column < 9; ++column) {
+//      double number_q;
+//      char delimiter;
+//      row_stream_q >> number_q >> delimiter;
+//      q_star[row][column] = number_q;
+//    }
+//  }
+//}
 
 bool PRIMITIVEController::init(hardware_interface::RobotHW* robot_hardware, ros::NodeHandle& node_handle) {
   position_joint_interface_ = robot_hardware->get<hardware_interface::PositionJointInterface>();
@@ -157,29 +151,52 @@ bool PRIMITIVEController::init(hardware_interface::RobotHW* robot_hardware, ros:
   return true;
 }
 
-bool saveArray(const double* pdata, size_t length, const std::string& file_path) {
-  std::ofstream os(file_path.c_str(), std::ios::binary | std::ios::out);
-  if (!os.is_open())
-    return false;
-  os.write(reinterpret_cast<const char*>(pdata), std::streamsize(length * sizeof(double)));
-  os.close();
-  return true;
-}
-
-bool loadArray(double* pdata, size_t length, const std::string& file_path) {
-  std::ifstream is(file_path.c_str(), std::ios::binary | std::ios::in);
-  if (!is.is_open())
-    return false;
-  is.read(reinterpret_cast<char*>(pdata), std::streamsize(length * sizeof(double)));
-  is.close();
-  return true;
-}
-
 void PRIMITIVEController::starting(const ros::Time& /* time */) {
   for (size_t i = 0; i < 7; ++i) {
     initial_pose_[i] = position_joint_handles_[i].getPosition();
   }
-  load_target_trajectory();
+//  PRIMITIVE_load_target_trajectory();
+  std::ifstream inputfile_r_star(
+      "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log_b.txt");
+  if (!inputfile_r_star.is_open()) {
+    std::cout << "Error reading desired position" << std::endl;
+  }
+  std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log_b.txt");
+  if (!inputfile_v_star.is_open()) {
+    std::cout << "Error reading desired velocity" << std::endl;
+  }
+  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/q_log.txt");
+  if (!inputfile_q_star.is_open()) {
+    std::cout << "Error reading q_log file" << std::endl;
+  }
+  for (int row = 0; row < Target_Traj_ROWS; ++row) {
+    std::string row_text_r;
+    std::getline(inputfile_r_star, row_text_r);
+    std::istringstream row_stream_r(row_text_r);
+    std::string row_text_v;
+    std::getline(inputfile_v_star, row_text_v);
+    std::istringstream row_stream_v(row_text_v);
+    for (int column = 0; column < Target_Traj_COLUMNS; ++column) {
+      double number_r;
+      double number_v;
+      char delimiter;
+      row_stream_r >> number_r >> delimiter;
+      r_star[row][column] = number_r;
+      row_stream_v >> number_v >> delimiter;
+      v_star[row][column] = number_v;
+    }
+  }
+  for (int row = 0; row < Target_Traj_ROWS; ++row) {
+    std::string row_text_q;
+    std::getline(inputfile_r_star, row_text_q);
+    std::istringstream row_stream_q(row_text_q);
+    for (int column = 0; column < 9; ++column) {
+      double number_q;
+      char delimiter;
+      row_stream_q >> number_q >> delimiter;
+      q_star[row][column] = number_q;
+    }
+  }
   initial_O_T_EE_ = model_handle_->getPose(franka::Frame::kEndEffector);
   elapsed_time_ = ros::Duration(0.0);
 }
@@ -306,7 +323,7 @@ void PRIMITIVEController::update(const ros::Time& /*time*/, const ros::Duration&
   idx_out += 1;
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
     for (size_t i = 0; i < 7; ++i) {
-      PRIMITIVE_publisher_.msg_.q_c[i] = joints_pose_[i] + vq(i) * ts;
+      PRIMITIVE_publisher_.msg_.q_c[i] = q_star[idx][i];
     }
     PRIMITIVE_publisher_.unlockAndPublish();
   }

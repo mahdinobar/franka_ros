@@ -52,6 +52,11 @@ class PRIMITIVEController : public controller_interface::MultiInterfaceControlle
   franka_hw::TriggerRate rate_trigger_{1.0};
   realtime_tools::RealtimePublisher<PRIMITIVEmessages> PRIMITIVE_publisher_;
   const bool debug=false;
+  static const int Target_Traj_ROWS = 5175;
+  static const int Target_Traj_COLUMNS = 3;
+  float r_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
+  float v_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
+  float q_star[Target_Traj_ROWS][9];
 
 };
 
