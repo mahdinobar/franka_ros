@@ -251,14 +251,6 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
       std::cout << "vq=\n" << vq;
       std::cout << std::endl;
       if (rate_trigger_() && MB_publisher_.trylock()) {
-        for (size_t i = 0; i < 3; ++i) {
-          MB_publisher_.msg_.r_star[i] = r_star[idx][i];
-          MB_publisher_.msg_.v_star[i] = v_star[idx][i];
-          MB_publisher_.msg_.EEposition[i] = EEposition(i);
-        }
-        MB_publisher_.unlockAndPublish();
-      }
-      if (rate_trigger_() && MB_publisher_.trylock()) {
         for (size_t i = 0; i < 42; ++i) {
           MB_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
         }
@@ -283,10 +275,17 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
       }
     }
   }
+  if (rate_trigger_() && MB_publisher_.trylock()) {
+    for (size_t i = 0; i < 3; ++i) {
+      MB_publisher_.msg_.r_star[i] = r_star[idx][i];
+      MB_publisher_.msg_.v_star[i] = v_star[idx][i];
+      MB_publisher_.msg_.EEposition[i] = EEposition(i);
+    }
+    MB_publisher_.unlockAndPublish();
+  }
   for (size_t i = 0; i < 7; ++i) {
     position_joint_handles_[i].setCommand(joints_pose_[i] + vq(i) * ts);
   }
-
   idx_out += 1;
   if (rate_trigger_() && MB_publisher_.trylock()) {
     for (size_t i = 0; i < 7; ++i) {
