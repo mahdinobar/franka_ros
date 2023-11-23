@@ -50,7 +50,6 @@ static const int Target_Traj_ROWS = 5175;
 static const int Target_Traj_COLUMNS = 3;
 float r_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
 float v_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
-float q_star[Target_Traj_ROWS][9];
 // load data into the global vars
 void load_target_trajectory() {
   std::ifstream inputfile_r_star(
@@ -61,10 +60,6 @@ void load_target_trajectory() {
   std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log_b.txt");
   if (!inputfile_v_star.is_open()) {
     std::cout << "Error reading desired velocity" << std::endl;
-  }
-  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/q_log.txt");
-  if (!inputfile_q_star.is_open()) {
-    std::cout << "Error reading q_log file" << std::endl;
   }
   for (int row = 0; row < Target_Traj_ROWS; ++row) {
     std::string row_text_r;
@@ -81,17 +76,6 @@ void load_target_trajectory() {
       r_star[row][column] = number_r;
       row_stream_v >> number_v >> delimiter;
       v_star[row][column] = number_v;
-    }
-  }
-  for (int row = 0; row < Target_Traj_ROWS; ++row) {
-    std::string row_text_q;
-    std::getline(inputfile_r_star, row_text_q);
-    std::istringstream row_stream_q(row_text_q);
-    for (int column = 0; column < 9; ++column) {
-      double number_q;
-      char delimiter;
-      row_stream_q >> number_q >> delimiter;
-      q_star[row][column] = number_q;
     }
   }
 }
@@ -300,8 +284,7 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     MB_publisher_.unlockAndPublish();
   }
   for (size_t i = 0; i < 7; ++i) {
-//    position_joint_handles_[i].setCommand(joints_pose_[i] + vq(i) * ts);
-    position_joint_handles_[i].setCommand(q_star[idx][i]);
+    position_joint_handles_[i].setCommand(joints_pose_[i] + vq(i) * ts);
   }
   idx_out += 1;
   if (rate_trigger_() && MB_publisher_.trylock()) {
