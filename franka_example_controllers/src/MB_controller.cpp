@@ -169,21 +169,21 @@ void MBController::starting(const ros::Time& /* time */) {
 }
 
 void MBController::update(const ros::Time& /*time*/, const ros::Duration& period) {
-  int mp = 100;
+  int mp = 4;
   double ts = 0.001 * mp;
-  std::array<double, 42> jacobian_array =
-      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-  Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
-  std::vector<int> ind_translational_jacobian{0, 1, 2};
-  std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
-  Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
-  Eigen::MatrixXd J_translation_pinv;
   //    TODO check joints_pose_ updates and i.c. is correct
   for (size_t i = 0; i < 7; ++i) {
     joints_pose_[i] = position_joint_handles_[i].getPosition();
   }
   if (idx_out % mp == 0) {
     elapsed_time_ += period;
+    std::array<double, 42> jacobian_array =
+        model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+    Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
+    std::vector<int> ind_translational_jacobian{0, 1, 2};
+    std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
+    Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
+    Eigen::MatrixXd J_translation_pinv;
     franka::RobotState robot_state = state_handle_->getRobotState();
     Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
     Eigen::Vector3d EEposition(transform.translation());
