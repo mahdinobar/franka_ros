@@ -193,8 +193,8 @@ void MBController::update(const ros::Time& /*time*/, const ros::Duration& period
     }
     Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
     Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
-    double K_p = 40;
-    double K_i = 40;
+    double K_p = 0.04;
+    double K_i = 0.04;
     double e_t[3];
     e_t[0] = (r_star[idx][0] - EEposition(0));
     e_t[1] = (r_star[idx][1] - EEposition(1));
