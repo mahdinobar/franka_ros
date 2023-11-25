@@ -50,8 +50,6 @@ bool PRIMITIVEController::init(hardware_interface::RobotHW* robot_hardware,
     }
   }
 
-  std::array<double, 7> q_start{
-      {-0.76543793, -0.08999656, -0.19902707, -2.04154379, -0.12972969, 2.73708789, 2.73708976}};
   for (size_t i = 0; i < q_start.size(); i++) {
     if (std::abs(position_joint_handles_[i].getPosition() - q_start[i]) > 0.1) {
       ROS_ERROR_STREAM(
@@ -92,42 +90,46 @@ void PRIMITIVEController::starting(const ros::Time& /* time */) {
   for (size_t i = 0; i < 7; ++i) {
     initial_pose_[i] = position_joint_handles_[i].getPosition();
   }
-  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/q_log_b.txt");
-  if (!inputfile_q_star.is_open()) {
-    std::cout << "Error reading q_log file" << std::endl;
-  }
-  for (int row = 0; row < Target_Traj_ROWS; ++row) {
-    std::string row_text_q;
-    std::getline(inputfile_q_star, row_text_q);
-    std::istringstream row_stream_q(row_text_q);
-    for (int column = 0; column < 9; ++column) {
-      double number_q;
-      char delimiter;
-      row_stream_q >> number_q >> delimiter;
-      q_star[row][column] = number_q;
-      std::cout << q_star[row][column] << " ";
-      std::cout << std::endl;
-    }
-  }
+//  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/q_log_b.txt");
+//  if (!inputfile_q_star.is_open()) {
+//    std::cout << "Error reading q_log file" << std::endl;
+//  }
+//  for (int row = 0; row < Target_Traj_ROWS; ++row) {
+//    std::string row_text_q;
+//    std::getline(inputfile_q_star, row_text_q);
+//    std::istringstream row_stream_q(row_text_q);
+//    for (int column = 0; column < 9; ++column) {
+//      double number_q;
+//      char delimiter;
+//      row_stream_q >> number_q >> delimiter;
+//      q_star[row][column] = number_q;
+//      std::cout << q_star[row][column] << " ";
+//      std::cout << std::endl;
+//    }
+//  }
   initial_O_T_EE_ = model_handle_->getPose(franka::Frame::kEndEffector);
   elapsed_time_ = ros::Duration(0.0);
 }
 
 void PRIMITIVEController::update(const ros::Time& /*time*/, const ros::Duration& period) {
-  int mp = 4;
-  double ts = 0.001 * mp;
-  //    TODO check joints_pose_ updates and i.c. is correct
+  int mp = 2000;
   for (size_t i = 0; i < 7; ++i) {
     joints_pose_[i] = position_joint_handles_[i].getPosition();
   }
-  if (idx_out % mp == 0) {
-    elapsed_time_ += period;
-    //  TODO should idx be updated here or end of call?
-    idx += 1;
-    franka::RobotState robot_state = state_handle_->getRobotState();
-    Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
-    Eigen::Vector3d EEposition(transform.translation());
+  elapsed_time_ += period;
+  if (idx_out % mp == 0 && idx_out / mp == 1) {
+    idx_command += 1;
+    q_command[0] = q_start[0] + 0.01 * (3.14 / 180);
   }
+  if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+    for (size_t i = 0; i < 7; ++i) {
+      PRIMITIVE_publisher_.msg_.q_c[i] = q_command[i];
+    }
+    PRIMITIVE_publisher_.unlockAndPublish();
+  }
+  franka::RobotState robot_state = state_handle_->getRobotState();
+  Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
+  Eigen::Vector3d EEposition(transform.translation());
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
     for (size_t i = 0; i < 3; ++i) {
       PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
@@ -135,19 +137,11 @@ void PRIMITIVEController::update(const ros::Time& /*time*/, const ros::Duration&
     PRIMITIVE_publisher_.unlockAndPublish();
   }
   for (size_t i = 0; i < 7; ++i) {
-    position_joint_handles_[i].setCommand(q_star[idx][i]);
+    position_joint_handles_[i].setCommand(q_command[i]);
   }
   idx_out += 1;
-  if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-    for (size_t i = 0; i < 7; ++i) {
-      PRIMITIVE_publisher_.msg_.q_c[i] = q_star[idx][i];
-    }
-    PRIMITIVE_publisher_.unlockAndPublish();
-  }
-
   if (debug) {
-    std::cout << "+++++++++++++++++++++++++++++++++++idx=" << idx << " \n";
-    std::cout << "!vq* ts=\n" << vq * ts;
+    std::cout << "+++++++++++++++++++++++++++++++++++idx_command=" << idx_command << " \n";
     std::cout << std::endl;
   }
 }
