@@ -117,9 +117,18 @@ void PRIMITIVEController::update(const ros::Time& /*time*/, const ros::Duration&
     joints_pose_[i] = position_joint_handles_[i].getPosition();
   }
   elapsed_time_ += period;
-  if (idx_out % mp == 0 && idx_out / mp == 1) {
+//  std::cout << "period=" << period << " \n";
+//  std::cout << std::endl;
+//  std::cout << "elapsed_time_=" << elapsed_time_ << " \n";
+//  std::cout << std::endl;
+//  std::cout << "idx_out=" << idx_out << " \n";
+//  std::cout << std::endl;
+  const double t_B=5;
+  if (elapsed_time_.toSec()==t_B) {
+//    std::cout << "!!!changed_q_c_setpoint idx_out=" << idx_out << " \n";
+//    std::cout << std::endl;
     idx_command += 1;
-    q_command[0] = q_start[0] + 0.01 * (3.14 / 180);
+    q_command[0] = q_start[0] + 0.1 * (3.14 / 180);
   }
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
     for (size_t i = 0; i < 7; ++i) {
