@@ -112,7 +112,7 @@ void PRIMITIVEController::starting(const ros::Time& /* time */) {
 }
 
 void PRIMITIVEController::update(const ros::Time& /*time*/, const ros::Duration& period) {
-  int mp = 2000;
+  int mp = 5000;
   for (size_t i = 0; i < 7; ++i) {
     joints_pose_[i] = position_joint_handles_[i].getPosition();
   }
