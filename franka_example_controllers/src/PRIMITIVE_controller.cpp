@@ -123,12 +123,12 @@ void PRIMITIVEController::update(const ros::Time& /*time*/, const ros::Duration&
 //  std::cout << std::endl;
 //  std::cout << "idx_out=" << idx_out << " \n";
 //  std::cout << std::endl;
-  const double t_B=5;
-  if (elapsed_time_.toSec()==t_B) {
+  const double t_B=5.000;
+  if (elapsed_time_.toSec()>=t_B && elapsed_time_.toSec()<t_B+0.020) {
 //    std::cout << "!!!changed_q_c_setpoint idx_out=" << idx_out << " \n";
 //    std::cout << std::endl;
     idx_command += 1;
-    q_command[0] = q_start[0] + 0.1 * (3.14 / 180);
+    q_command[0] = q_command[0] + 0.0005 * (3.14 / 180);
   }
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
     for (size_t i = 0; i < 7; ++i) {

@@ -47,7 +47,7 @@ class PRIMITIVEController : public controller_interface::MultiInterfaceControlle
   Eigen::Matrix<double, 7, 1> vq = {0, 0, 0, 0, 0, 0, 0};
   Eigen::Vector3d EEposition;
   std::array<double, 3> I_e = {0, 0, 0};
-  franka_hw::TriggerRate rate_trigger_{10.0};
+  franka_hw::TriggerRate rate_trigger_{1000.0};
   realtime_tools::RealtimePublisher<PRIMITIVEmessages> PRIMITIVE_publisher_;
   const bool debug = false;
   static const int Target_Traj_ROWS = 5175;
