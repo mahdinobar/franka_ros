@@ -38,6 +38,7 @@ class PRIMITIVEController : public controller_interface::MultiInterfaceControlle
   std::vector<hardware_interface::JointHandle> position_joint_handles_;
   std::unique_ptr<franka_hw::FrankaModelHandle> model_handle_;
   ros::Duration elapsed_time_;
+  ros::Time t_init;
   std::array<double, 7> initial_pose_{};
   std::array<double, 7> joints_pose_{};
   std::array<double, 16> initial_O_T_EE_{};
