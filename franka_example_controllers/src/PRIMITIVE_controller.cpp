@@ -112,12 +112,12 @@ void PRIMITIVEController::starting(const ros::Time& /* time */) {
   t_init = ros::Time::now();
   std::cout << "ROS system clock t_init=" << t_init << " \n";
   std::cout << std::endl;
-//  std::cout << "ros::Time::isSimTime()=" << ros::Time::isSimTime() << " \n";
-//  std::cout << std::endl;
-//  std::cout << "ros::Time::isSystemTime()=" << ros::Time::isSystemTime() << " \n";
-//  std::cout << std::endl;
-//  std::cout << "ros::Time::now()=" << ros::Time::now() << " \n";
-//  std::cout << std::endl;
+  //  std::cout << "ros::Time::isSimTime()=" << ros::Time::isSimTime() << " \n";
+  //  std::cout << std::endl;
+  //  std::cout << "ros::Time::isSystemTime()=" << ros::Time::isSystemTime() << " \n";
+  //  std::cout << std::endl;
+  //  std::cout << "ros::Time::now()=" << ros::Time::now() << " \n";
+  //  std::cout << std::endl;
 }
 
 void PRIMITIVEController::update(const ros::Time& rosTime, const ros::Duration& period) {
@@ -126,19 +126,25 @@ void PRIMITIVEController::update(const ros::Time& rosTime, const ros::Duration& 
     joints_pose_[i] = position_joint_handles_[i].getPosition();
   }
   elapsed_time_ += period;
-//  elapsed_time_ = rosTime - t_init;
-//  std::cout << "period=" << period << " \n";
-//  std::cout << std::endl;
-//  std::cout << "elapsed_time_=" << elapsed_time_ << " \n";
-//  std::cout << std::endl;
-//  std::cout << "rosTime=" << rosTime << " \n";
-//  std::cout << std::endl;
+  //  elapsed_time_ = rosTime - t_init;
+  //  std::cout << "period=" << period << " \n";
+  //  std::cout << std::endl;
+  //  std::cout << "elapsed_time_=" << elapsed_time_ << " \n";
+  //  std::cout << std::endl;
+  //  std::cout << "rosTime=" << rosTime << " \n";
+  //  std::cout << std::endl;
   const double t_B = 5.000;
   if (elapsed_time_.toSec() >= t_B && elapsed_time_.toSec() < t_B + 0.010) {
     idx_command += 1;
     std::cout << "!!!idx_command=" << idx_command << " \n";
     std::cout << std::endl;
-    q_command[0] = q_command[0] + 0.01 * (3.14 / 180);
+    q_command[0] = q_command[0] + 0.001 * (3.14159 / 180);
+    q_command[1] = q_command[1] + 0.001 * (3.14159 / 180);
+    q_command[2] = q_command[2] + 0.001 * (3.14159 / 180);
+    q_command[3] = q_command[3] + 0.001 * (3.14159 / 180);
+    q_command[4] = q_command[4] + 0.001 * (3.14159 / 180);
+    q_command[5] = q_command[5] + 0.001 * (3.14159 / 180);
+    q_command[6] = q_command[6] + 0.001 * (3.14159 / 180);
   }
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
     for (size_t i = 0; i < 7; ++i) {
