@@ -90,44 +90,54 @@ void PRIMITIVEController::starting(const ros::Time& /* time */) {
   for (size_t i = 0; i < 7; ++i) {
     initial_pose_[i] = position_joint_handles_[i].getPosition();
   }
-//  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/q_log_b.txt");
-//  if (!inputfile_q_star.is_open()) {
-//    std::cout << "Error reading q_log file" << std::endl;
-//  }
-//  for (int row = 0; row < Target_Traj_ROWS; ++row) {
-//    std::string row_text_q;
-//    std::getline(inputfile_q_star, row_text_q);
-//    std::istringstream row_stream_q(row_text_q);
-//    for (int column = 0; column < 9; ++column) {
-//      double number_q;
-//      char delimiter;
-//      row_stream_q >> number_q >> delimiter;
-//      q_star[row][column] = number_q;
-//      std::cout << q_star[row][column] << " ";
-//      std::cout << std::endl;
-//    }
-//  }
+  //  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/q_log_b.txt");
+  //  if (!inputfile_q_star.is_open()) {
+  //    std::cout << "Error reading q_log file" << std::endl;
+  //  }
+  //  for (int row = 0; row < Target_Traj_ROWS; ++row) {
+  //    std::string row_text_q;
+  //    std::getline(inputfile_q_star, row_text_q);
+  //    std::istringstream row_stream_q(row_text_q);
+  //    for (int column = 0; column < 9; ++column) {
+  //      double number_q;
+  //      char delimiter;
+  //      row_stream_q >> number_q >> delimiter;
+  //      q_star[row][column] = number_q;
+  //      std::cout << q_star[row][column] << " ";
+  //      std::cout << std::endl;
+  //    }
+  //  }
   initial_O_T_EE_ = model_handle_->getPose(franka::Frame::kEndEffector);
-  elapsed_time_ = ros::Duration(0.0);
+  elapsed_time_ = ros::Duration();
+  t_init = ros::Time::now();
+  std::cout << "ROS system clock t_init=" << t_init << " \n";
+  std::cout << std::endl;
+//  std::cout << "ros::Time::isSimTime()=" << ros::Time::isSimTime() << " \n";
+//  std::cout << std::endl;
+//  std::cout << "ros::Time::isSystemTime()=" << ros::Time::isSystemTime() << " \n";
+//  std::cout << std::endl;
+//  std::cout << "ros::Time::now()=" << ros::Time::now() << " \n";
+//  std::cout << std::endl;
 }
 
-void PRIMITIVEController::update(const ros::Time& /*time*/, const ros::Duration& period) {
-//  int mp = 5000;
+void PRIMITIVEController::update(const ros::Time& rosTime, const ros::Duration& period) {
+  //  int mp = 5000;
   for (size_t i = 0; i < 7; ++i) {
     joints_pose_[i] = position_joint_handles_[i].getPosition();
   }
   elapsed_time_ += period;
+//  elapsed_time_ = rosTime - t_init;
 //  std::cout << "period=" << period << " \n";
 //  std::cout << std::endl;
 //  std::cout << "elapsed_time_=" << elapsed_time_ << " \n";
 //  std::cout << std::endl;
-//  std::cout << "idx_out=" << idx_out << " \n";
+//  std::cout << "rosTime=" << rosTime << " \n";
 //  std::cout << std::endl;
-  const double t_B=5.000;
-  if (elapsed_time_.toSec()>=t_B && elapsed_time_.toSec()<t_B+0.020) {
-//    std::cout << "!!!changed_q_c_setpoint idx_out=" << idx_out << " \n";
-//    std::cout << std::endl;
+  const double t_B = 5.000;
+  if (elapsed_time_.toSec() >= t_B && elapsed_time_.toSec() < t_B + 0.020) {
     idx_command += 1;
+    std::cout << "!!!idx_command=" << idx_command << " \n";
+    std::cout << std::endl;
     q_command[0] = q_command[0] + 0.0005 * (3.14 / 180);
   }
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
@@ -148,9 +158,8 @@ void PRIMITIVEController::update(const ros::Time& /*time*/, const ros::Duration&
   for (size_t i = 0; i < 7; ++i) {
     position_joint_handles_[i].setCommand(q_command[i]);
   }
-  idx_out += 1;
   if (debug) {
-    std::cout << "+++++++++++++++++++++++++++++++++++idx_command=" << idx_command << " \n";
+    std::cout << "idx_command=" << idx_command << " \n";
     std::cout << std::endl;
   }
 }
