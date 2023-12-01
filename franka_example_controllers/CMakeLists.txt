@@ -91,6 +91,7 @@ add_library(franka_example_controllers
         src/joint_wall.cpp
         src/debug_test.cpp
         src/PRIMITIVE_controller.cpp
+        src/PRIMITIVE_velocity_controller.cpp
 )
 
 add_dependencies(franka_example_controllers
