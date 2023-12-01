@@ -45,13 +45,14 @@ class PRIMITIVEController : public controller_interface::MultiInterfaceControlle
   std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_;  // seems to be franka_states
   int idx_command = 0;
   int idx_out = 1;
+  int step_k;
   Eigen::Matrix<double, 7, 1> vq = {0, 0, 0, 0, 0, 0, 0};
   Eigen::Vector3d EEposition;
   std::array<double, 3> I_e = {0, 0, 0};
   franka_hw::TriggerRate rate_trigger_{1000.0};
   realtime_tools::RealtimePublisher<PRIMITIVEmessages> PRIMITIVE_publisher_;
   const bool debug = false;
-  static const int Target_Traj_ROWS = 5175;
+  static const int Target_Traj_ROWS = 127620;
   static const int Target_Traj_COLUMNS = 3;
   float r_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
   float v_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
