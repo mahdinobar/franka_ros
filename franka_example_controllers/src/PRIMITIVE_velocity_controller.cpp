@@ -239,14 +239,8 @@ namespace franka_example_controllers {
             }
             pseudoInverse(J_translation, J_translation_pinv);
             dq_command = J_translation_pinv * vc;
-            if (idx_command > Target_Traj_ROWS) {
-                PRIMITIVEVelocityController::stopRequest(ros::Time::now());
-            }
             //  TODO should idx_command be updated here or end of call?
             idx_command += 1;
-            if (idx_command >= Target_Traj_ROWS) {
-                PRIMITIVEVelocityController::stopRequest(ros::Time::now());
-            }
             if (debug) {
                 std::cout << "**************************************************idx_command=" << idx_command
                           << " \n";
@@ -324,9 +318,14 @@ namespace franka_example_controllers {
             }
             PRIMITIVE_publisher_.unlockAndPublish();
         }
-        for (size_t i = 0; i < 7; ++i) {
-            velocity_joint_handles_[i].setCommand(dq_command(i));
+        if (idx_command >= Target_Traj_ROWS) {
+            PRIMITIVEVelocityController::stopRequest(ros::Time::now());
+        } else {
+            for (size_t i = 0; i < 7; ++i) {
+                velocity_joint_handles_[i].setCommand(dq_command(i));
+            }
         }
+
         idx_out += 1;
         if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
             for (size_t i = 0; i < 7; ++i) {
