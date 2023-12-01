@@ -144,10 +144,12 @@ namespace franka_example_controllers {
                 row_stream_v >> number_v >> delimiter;
                 r_star[row][column] = number_r;
                 v_star[row][column] = number_v;
-                std::cout << r_star[row][column] << " r";
-                std::cout << std::endl;
-                std::cout << v_star[row][column] << " v";
-                std::cout << std::endl;
+                if (debug) {
+                    std::cout << r_star[row][column] << " r";
+                    std::cout << std::endl;
+                    std::cout << v_star[row][column] << " v";
+                    std::cout << std::endl;
+                }
             }
         }
     }
@@ -200,7 +202,7 @@ namespace franka_example_controllers {
         //  //    PRIMITIVEVelocityController::stopRequest(ros::Time::now());
         //  //  }
 
-        int mp = 4;
+        int mp = 1;
         double ts = 0.001 * mp;
         //    TODO check joints_pose_ updates and i.c. is correct
         for (size_t i = 0; i < 7; ++i) {
