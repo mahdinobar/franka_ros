@@ -50,15 +50,17 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   std::array<double, 3> I_e = {0, 0, 0};
   franka_hw::TriggerRate rate_trigger_{1000.0};
   realtime_tools::RealtimePublisher<PRIMITIVEmessages> PRIMITIVE_publisher_;
-  const bool debug = false;
-  static const int Target_Traj_ROWS = 127620;
+  const bool debug = true;
+  static const int Target_Traj_ROWS = 6381;
   static const int Target_Traj_COLUMNS = 3;
   float r_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
   float v_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
   float q_star[Target_Traj_ROWS][9];
   std::array<double, 7> q_start{
       {-0.76543793, -0.08999656, -0.19902707, -2.04154379, -0.12972969, 2.73708789, 2.73708976}};
-  std::array<double, 7> dq_command{{0,0,0,0,0,0,0}};
+//  std::array<double, 7> dq_command{{0,0,0,0,0,0,0}};
+  Eigen::Matrix<double, 7, 1> dq_command={0,0,0,0,0,0,0};
+
 };
 
 }  // namespace franka_example_controllers
