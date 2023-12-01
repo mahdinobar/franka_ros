@@ -131,8 +131,12 @@ void PRIMITIVEController::update(const ros::Time& rosTime, const ros::Duration& 
   //  std::cout << std::endl;
   //  std::cout << "q_star[step_k][0]=" << q_star[step_k][0] << " \n";
   //  std::cout << std::endl;
-  for (int i = 0; i < 7; ++i) {
-    q_command[i] = q_star[step_k][i];
+//  for (int i = 0; i < 7; ++i) {
+//    q_command[i] = q_star[step_k][i];
+//  }
+  const double t_B = 5.000;
+  if (elapsed_time_.toSec() >= t_B && elapsed_time_.toSec() < t_B + 0.0015) {
+    q_command[0] = q_start[0] + 0.01 * (3.14159265359/180);
   }
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
     for (size_t i = 0; i < 7; ++i) {
