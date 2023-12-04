@@ -59,7 +59,7 @@ PRIMITIVE_velocity_controller:
         - $(arg arm_id)_joint6
         - $(arg arm_id)_joint7
     # Activate rate limiter? [true|false]
-    rate_limiting: true
+    rate_limiting: flase
     # Cutoff frequency of the low-pass filter. Set to >= 1000 to deactivate.
     cutoff_frequency: 100
 

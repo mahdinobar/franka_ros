@@ -50,7 +50,6 @@ namespace franka_example_controllers {
         std::unique_ptr <franka_hw::FrankaStateHandle> state_handle_;  // seems to be franka_states
         int idx_command = 0;
         int idx_out = 1;
-        int step_k;
         std::array<double, 3> I_e = {0, 0, 0};
         franka_hw::TriggerRate rate_trigger_{1000.0};
         realtime_tools::RealtimePublisher <PRIMITIVEmessages> PRIMITIVE_publisher_;
