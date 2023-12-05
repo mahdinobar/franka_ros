@@ -83,7 +83,7 @@ namespace franka_example_controllers {
                                      << ex.what());
             return false;
         }
-        PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1);
+        PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1e6, false);
         return true;
     }
 
@@ -152,24 +152,28 @@ namespace franka_example_controllers {
         }
     }
 
-    void PRIMITIVEVelocityController::update(const ros::Time &rosTime, const ros::Duration &period) {
+    void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Duration &period) {
         ////  uncomment for PRIMITIVE control
         //  int mp = 5000;
         for (size_t i = 0; i < 7; ++i) {
             joints_vel_[i] = velocity_joint_handles_[i].getVelocity();
         }
         elapsed_time_ += period;
-        const double t_B = 5.000;
-        const double K_p = 1;
-        const double dq_star = 20 * (3.14159265359 / 180);
-        if (elapsed_time_.toSec() == t_B) {
+        const double t_B = 3.000;
+        const double K_p = 0.1;
+        const double dq_star = 0.1 * (3.14159265359 / 180);
+        if (elapsed_time_.toSec() >= t_B) {
 //            dq_command[0] = K_p * (dq_star - joints_vel_[0]);
-            dq_command[0] = dq_star;
+//            dq_command[0] = dq_star;
+            dq_command[0] = dq_command[0] + dq_star;
         }
         if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+//        if (PRIMITIVE_publisher_.trylock()) {
             for (size_t i = 0; i < 7; ++i) {
                 PRIMITIVE_publisher_.msg_.dq_c[i] = dq_command[i];
             }
+            PRIMITIVE_publisher_.msg_.header.stamp = rosTime;
+            PRIMITIVE_publisher_.msg_.header.seq = idx_command;
             PRIMITIVE_publisher_.unlockAndPublish();
         }
         franka::RobotState robot_state = state_handle_->getRobotState();
@@ -188,13 +192,14 @@ namespace franka_example_controllers {
             std::cout << "idx_command=" << idx_command << " \n";
             std::cout << std::endl;
         }
-        if (elapsed_time_.toSec() > 10) {
+        if (elapsed_time_.toSec() > 6) {
             PRIMITIVEVelocityController::stopRequest(ros::Time::now());
         } else {
             for (size_t i = 0; i < 7; ++i) {
                 velocity_joint_handles_[i].setCommand(dq_command(i));
             }
         }
+        idx_command++;
 
 //        int mp = 1;
 //        double ts = 0.001 * mp;

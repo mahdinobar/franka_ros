@@ -23,6 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
         rospy
         urdf
         visualization_msgs
+        std_msgs
 )
 
 find_package(Eigen3 REQUIRED)
@@ -42,7 +43,7 @@ add_message_files(FILES
         JointTorqueComparison.msg
         PRIMITIVEmessages.msg
 )
-generate_messages()
+generate_messages(DEPENDENCIES std_msgs)
 
 generate_dynamic_reconfigure_options(
         cfg/compliance_param.cfg
@@ -73,6 +74,7 @@ catkin_package(
         urdf
         visualization_msgs
         DEPENDS Franka
+        std_msgs
 )
 
 add_library(franka_example_controllers
