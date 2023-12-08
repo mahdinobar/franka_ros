@@ -124,8 +124,6 @@ namespace franka_example_controllers {
         if (!inputfile_v_star.is_open()) {
             std::cout << "Error reading v_log_interp file" << std::endl;
         }
-        std::cout << "r_star and v_star" << " ";
-        std::cout << std::endl;
 
         for (int row = 0; row < Target_Traj_ROWS; ++row) {
             std::string row_text_r;
@@ -143,9 +141,9 @@ namespace franka_example_controllers {
                 r_star[row][column] = number_r;
                 v_star[row][column] = number_v;
                 if (debug) {
-                    std::cout << r_star[row][column] << " r";
+                    std::cout << r_star[row][column] << " r_star";
                     std::cout << std::endl;
-                    std::cout << v_star[row][column] << " v";
+                    std::cout << v_star[row][column] << " v_star";
                     std::cout << std::endl;
                 }
             }
@@ -161,11 +159,17 @@ namespace franka_example_controllers {
         elapsed_time_ += period;
         const double t_B = 3.000;
         const double K_p = 0.1;
-        const double dq_star = 0.1 * (3.14159265359 / 180);
-        if (elapsed_time_.toSec() >= t_B) {
+        const double dq_star = 0.5* (3.14159265359 / 180);
+        if (elapsed_time_.toSec() >= t_B && elapsed_time_.toSec() < t_B+0.050) {
 //            dq_command[0] = K_p * (dq_star - joints_vel_[0]);
 //            dq_command[0] = dq_star;
-            dq_command[0] = dq_command[0] + dq_star;
+            dq_command[0] = dq_command[0] + 0.4* (3.14159265359 / 180);
+            dq_command[1] = dq_command[1] + 0.2* (3.14159265359 / 180);
+            dq_command[2] = dq_command[2] + 0.2* (3.14159265359 / 180);
+            dq_command[3] = dq_command[3] + 0.3* (3.14159265359 / 180);
+            dq_command[4] = dq_command[4] + 0.4* (3.14159265359 / 180);
+            dq_command[5] = dq_command[5] + 0.5* (3.14159265359 / 180);
+            dq_command[6] = dq_command[6] - 0.5* (3.14159265359 / 180);
         }
         if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
 //        if (PRIMITIVE_publisher_.trylock()) {
@@ -184,9 +188,6 @@ namespace franka_example_controllers {
                 PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
             }
             PRIMITIVE_publisher_.unlockAndPublish();
-        }
-        for (size_t i = 0; i < 7; ++i) {
-            velocity_joint_handles_[i].setCommand(dq_command[i]);
         }
         if (debug) {
             std::cout << "idx_command=" << idx_command << " \n";

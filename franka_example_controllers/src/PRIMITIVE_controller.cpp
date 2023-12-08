@@ -112,7 +112,7 @@ void PRIMITIVEController::starting(const ros::Time& /* time */) {
   initial_O_T_EE_ = model_handle_->getPose(franka::Frame::kEndEffector);
   elapsed_time_ = ros::Duration();
   t_init = ros::Time::now();
-  std::cout << "ROS system clock t_init=" << t_init << " \n";
+  std::cout << "PRIMITIVEController:: ROS system clock t_init=" << t_init << " \n";
   std::cout << std::endl;
   step_k = 0;
   std::cout << "ros::Time::isSimTime()=" << ros::Time::isSimTime() << " \n";
