@@ -55,10 +55,7 @@ namespace franka_example_controllers {
             std::array<double, 7> q_start{
                     {-0.42529795, 0.11298615, 0.20446317, -2.52843438, -0.15231932, 2.63230466, M_PI_4}};
             for (size_t i = 0; i < q_start.size(); i++) {
-                std::cout << "++++++++state_handle.getRobotState().q_d[i]=" << state_handle.getRobotState().q_d[i]
-                          << " \n";
-                std::cout << "--------q_start[i]=" << q_start[i] << " \n";
-                if (std::abs(state_handle.getRobotState().q_d[i] - q_start[i]) > 0.1) {
+                if (std::abs(state_handle.getRobotState().q_d[i] - q_start[i]) > 1) {
                     ROS_ERROR_STREAM(
                             "CartesianPoseExampleController: Robot is not in the expected starting position for "
                             "running this example. Run `roslaunch franka_example_controllers move_to_start.launch "
@@ -77,20 +74,10 @@ namespace franka_example_controllers {
 
     void CartesianPoseExampleController::starting(const ros::Time & /* time */) {
         initial_pose_ = cartesian_pose_handle_->getRobotState().O_T_EE_d;
-//        std::vector<double> linspace(double min, double max, int n) {
-//            vector<double> result;
-//            int iterator = 0;
-//            for (int i = 0; i <= n - 2; i++) {
-//                double temp = min + i * (max - min) / (floor((double) n) - 1);
-//                result.insert(result.begin() + iterator, temp);
-//                iterator += 1;
-//            }
-//            result.insert(result.begin() + iterator, max);
-//            return result;
-//        }
-        interp_x = linspace(initial_pose_[12], p_ee_target[0], 100);
-        interp_y = linspace(initial_pose_[13], p_ee_target[1], 100);
-        interp_z = linspace(initial_pose_[14], p_ee_target[2], 100);
+        std::cout << "+++++++++++initial_pose_[12]=" << initial_pose_[12] << " \n";
+        interp_x = linspace(initial_pose_[12], p_ee_target[0], 50000);
+//        interp_y = linspace(initial_pose_[13], p_ee_target[1], 10000);
+//        interp_z = linspace(initial_pose_[14], p_ee_target[2], 10000);
         elapsed_time_ = ros::Duration(0.0);
     }
 
@@ -103,17 +90,26 @@ namespace franka_example_controllers {
         double delta_x = radius * std::sin(angle);
         double delta_z = radius * (std::cos(angle) - 1);
         std::array<double, 16> new_pose = initial_pose_;
+        int dk = 100;
+        if (step_k % dk == 0) {
+            std::cout << "---interp_x[step_k]=" << interp_x[step_k] << " \n";
+        }
+        new_pose[12] = interp_x[step_k];
 //        new_pose[12] -= delta_x;
 //        new_pose[14] -= delta_z;
-        if (step_k < 100) {
-            new_pose[12] = interp_x[step_k];
-            new_pose[13] = interp_y[step_k];
-            new_pose[14] = interp_z[step_k];
-        } else {
-            new_pose[12] = 0.45039319;
-            new_pose[13] = -0.09860044;
-            new_pose[14] = 0.17521834;
-        }
+//        new_pose[12] = 0.45039319;
+//        int dk = 100;
+//        if (step_k%dk==0 && step_k/dk<1000) {
+//            std::cout << "§§§delta_x=" << delta_x << " \n";
+//            std::cout << "§§§step_k=" << step_k << " \n";
+//            new_pose[12] = interp_x[step_k/dk];
+////            new_pose[13] = interp_y[step_k/dk];
+////            new_pose[14] = interp_z[step_k/dk];
+//        } else {
+//            new_pose[12] = 0.45039319;
+//            new_pose[13] = -0.09860044;
+//            new_pose[14] = 0.17521834;
+//        }
         cartesian_pose_handle_->setCommand(new_pose);
         step_k += 1;
     }
