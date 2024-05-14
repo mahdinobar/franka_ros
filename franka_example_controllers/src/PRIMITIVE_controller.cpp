@@ -90,7 +90,7 @@ void PRIMITIVEController::starting(const ros::Time& /* time */) {
   for (size_t i = 0; i < 7; ++i) {
     initial_pose_[i] = position_joint_handles_[i].getPosition();
   }
-  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/q_log_b_interp.txt");
+  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/RLCFEP/code/logs/q_log_b_interp.txt");
   if (!inputfile_q_star.is_open()) {
     std::cout << "Error reading q_log_interp file" << std::endl;
   }

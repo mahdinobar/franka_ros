@@ -91,7 +91,7 @@ namespace franka_example_controllers {
         for (size_t i = 0; i < 7; ++i) {
             initial_pose_[i] = velocity_joint_handles_[i].getPosition();
         }
-        std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/q_log_b_interp.txt");
+        std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/RLCFEP/code/logs/q_log_b_interp.txt");
         if (!inputfile_q_star.is_open()) {
             std::cout << "Error reading q_log_interp file" << std::endl;
         }
@@ -116,11 +116,11 @@ namespace franka_example_controllers {
         std::cout << "ros::Time::isSystemTime()=" << ros::Time::isSystemTime() << " \n";
         std::cout << std::endl;
         std::ifstream inputfile_r_star(
-                "/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log_b.txt");
+                "/home/mahdi/ETHZ/codes/RLCFEP/code/logs/currentPosition_log_b.txt");
         if (!inputfile_r_star.is_open()) {
             std::cout << "Error reading r_log_interp file" << std::endl;
         }
-        std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log_b.txt");
+        std::ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/RLCFEP/code/logs/currentVel_log_b.txt");
         if (!inputfile_v_star.is_open()) {
             std::cout << "Error reading v_log_interp file" << std::endl;
         }

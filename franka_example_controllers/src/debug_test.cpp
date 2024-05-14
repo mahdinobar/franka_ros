@@ -7,13 +7,13 @@ int main()
 {
 
 
-  ifstream inputfile_r_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentPosition_log.txt");
+  ifstream inputfile_r_star("/home/mahdi/ETHZ/codes/RLCFEP/code/logs/currentPosition_log.txt");
   if (!inputfile_r_star.is_open())
   {
     cout<<"Error reading desired position"<<endl;
   }
 
-  ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/rl_reach/code/logs/currentVel_log.txt");
+  ifstream inputfile_v_star("/home/mahdi/ETHZ/codes/RLCFEP/code/logs/currentVel_log.txt");
   if (!inputfile_v_star.is_open())
   {
     cout<<"Error reading desired velocity"<<endl;
