@@ -215,7 +215,7 @@ namespace franka_example_controllers {
             }
             pseudoInverse(J_translation, J_translation_pinv);
             vq = J_translation_pinv * vc;
-            if (idx > Target_Traj_ROWS) {
+            if (idx > Target_Traj_ROWS-10) {
                 MBController::stopRequest(ros::Time::now());
             }
             //  TODO should idx be updated here or end of call?
