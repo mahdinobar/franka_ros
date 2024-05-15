@@ -320,7 +320,7 @@ namespace franka_example_controllers {
             }
             PRIMITIVE_publisher_.unlockAndPublish();
         }
-        if (idx_command >= Target_Traj_ROWS) {
+        if (idx_command >= Target_Traj_ROWS-mp) {
             PRIMITIVEVelocityController::stopRequest(ros::Time::now());
         } else {
             for (size_t i = 0; i < 7; ++i) {
