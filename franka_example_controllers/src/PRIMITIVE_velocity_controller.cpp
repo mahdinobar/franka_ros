@@ -244,6 +244,16 @@ namespace franka_example_controllers {
             //  TODO should idx_command be updated here or end of call?
             idx_command += 1;
             if (debug) {
+//                points:
+//                x               y
+//                0               0
+//                1               0.001
+//                2               0.003
+//                3               0.006
+//                5               0.01
+//                10               0.01
+//                5PL curve fitted (asymptotic sigmoidal nonlinear curve)
+//                y = 0.01016642 + (0.0001908216 - 0.01016642)/(1 + (x/431.6636)^2.486446)^209712.1
                 std::cout << "**************************************************idx_command=" << idx_command
                           << " \n";
                 std::cout << "period=" << period << " \n";
