@@ -59,10 +59,19 @@ namespace franka_example_controllers {
         float r_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
         float v_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
         float q_star[Target_Traj_ROWS][9];
+//        std::array<double, 7> q_start{
+//                {-0.76543793, -0.08999656, -0.19902707, -2.04154379, -0.12972969, 2.73708789, 2.73708976}};
         std::array<double, 7> q_start{
-                {-0.76543793, -0.08999656, -0.19902707, -2.04154379, -0.12972969, 2.73708789, 2.73708976}};
+                {-0.00155713, -0.7739, -0.00012461, -2.38384, -0.00188551, 1.56271, 0.806219}};
 //  std::array<double, 7> dq_command{{0,0,0,0,0,0,0}};
         Eigen::Matrix<double, 7, 1> dq_command = {0, 0, 0, 0, 0, 0, 0};
+        std::array<double, 3> r_star_0 = {0.307926, -0.000730912, 0.573038};
+        std::array<double, 3> r_star_tf = {0.476529, -0.253709, 0.193911};
+        double v_star_2[3];
+        std::array<double, 3> r_star_2 = r_star_0;
+        std::array<double, 3> e_t = {0, 0, 0};
+        std::array<double, 3> e_EE_target = {0, 0, 0};
+
 
     };
 
