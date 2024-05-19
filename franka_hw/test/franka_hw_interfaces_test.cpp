@@ -114,7 +114,7 @@ TEST(FrankaHWTests, JointLimitInterfacesEnforceLimitsOnCommands) {
                                    uniform_distribution(random_engine));
     effort_handles[i].setCommand(joint_limits[i].max_effort + uniform_distribution(random_engine));
   }
-  robot_ptr->enforceLimits(ros::Duration(0.001));
+  robot_ptr->enforceLimits(ros::Duration(0.01));
   for (size_t i = 0; i < joint_names.size(); ++i) {
     EXPECT_LE(position_handles[i].getCommand(), joint_limits[i].max_position);
     EXPECT_GE(position_handles[i].getCommand(), joint_limits[i].min_position);

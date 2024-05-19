@@ -66,7 +66,9 @@ namespace franka_example_controllers {
 //  std::array<double, 7> dq_command{{0,0,0,0,0,0,0}};
         Eigen::Matrix<double, 7, 1> dq_command = {0, 0, 0, 0, 0, 0, 0};
         std::array<double, 3> r_star_0 = {0.307926, -0.000730912, 0.573038};
-        std::array<double, 3> r_star_tf = {0.476529, -0.253709, 0.193911};
+//        std::array<double, 3> r_star_tf = {0.476529, -0.253709, 0.193911};
+        std::array<double, 3> r_star_tf = {0.465203,        -0.237464,        0.168568};
+
         double v_star_2[3];
         std::array<double, 3> r_star_2 = r_star_0;
         std::array<double, 3> e_t = {0, 0, 0};

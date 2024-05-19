@@ -204,15 +204,19 @@ namespace franka_example_controllers {
         idx_command++;
                 points:
                 t               v
-                0               0
-                1               0.0005
-                2               0.003
-                3               0.006
-                5               0.01
-                10               0.01
+              0               0
+              1               0.0003
+              2               0.001
+              3               0.004
+              5               0.008
+             10               0.015
+             20               0.02
+             30               0.02
+             60               0.02
+            120               0.02
                 5PL curve fitted (asymptotic sigmoidal nonlinear curve)
-                v = 0.01013542 + (0.000001471537 - 0.01013542)/(1 + (x/337.5456)^2.555158)^162339.9
-    */
+        y = 0.02011276 + (-0.0003050539 - 0.02011276)/(1 + (x/16.15651)^1.732438)^4.038572
+         */
         int mp = 1;
         double ts = 0.001 * mp;
         //    TODO check joints_pose_ updates and i.c. is correct
@@ -247,10 +251,10 @@ namespace franka_example_controllers {
 //                v_star_2[2] = -(0.01013542 + (0.000001471537 - 0.01013542) /
 //                                             std::pow(1 + std::pow(t / 337.5456, 2.555158), 162339.9));
 //            }
-//            y = 0.01005668 + (0.000009893764 - 0.01005668)/(1 + (x/335.2619)^2.587067)^188427.5
-//            y = 0.010044 + (0.00001119873 - 0.010044)/(1 + (x/325.6894)^2.592092)^179448.1
-            double v_star_2_length = 0.010044 + (0.00001119873 - 0.010044)/
-                                     std::pow(1 + std::pow(idx_command / 325.6894, 2.592092), 179448.1);
+//            y = 0.02011276 + (-0.0003050539 - 0.02011276)/(1 + (x/16.15651)^1.732438)^4.038572
+            if (idx_command > 5000) { ts = 0.005; }
+            double v_star_2_length = 0.02011276 + (-0.0003050539 - 0.02011276) /
+                                                  std::pow(1 + std::pow(idx_command / 16.15651, 1.732438), 4.038572);
             v_star_2[0] = v_star_2_length * (r_star_tf[0] - r_star_0[0]);
             v_star_2[1] = v_star_2_length * (r_star_tf[1] - r_star_0[1]);
             v_star_2[2] = v_star_2_length * (r_star_tf[2] - r_star_0[2]);
@@ -341,8 +345,8 @@ namespace franka_example_controllers {
                 for (int i = 0; i < 7; i++) {
                     std::cout << dq_command(i) << std::endl;
                 }
+                std::cout << std::endl;
             }
-            std::cout << std::endl;
             if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
                 for (size_t i = 0; i < 42; ++i) {
                     PRIMITIVE_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
@@ -388,7 +392,15 @@ namespace franka_example_controllers {
 //        if (idx_command >= Target_Traj_ROWS - mp) {
 //        std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
 //        std::cout << "idx_out=" << idx_out << " \n";
-        if (norm_e_EE_t < 0.020 && idx_out>1000) {
+        if (norm_e_EE_t < 0.001 && idx_out > 1000) {
+            std::cout << "STOPPING!!!!!!!!!!!!!!!!" << " \n";
+            std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
+            std::cout << "*******1-EEposition=\n";
+            for (int i = 0; i < 3; i++) {
+                std::cout << EEposition(i) << " ";
+                std::cout << std::endl;
+            }
+            std::cout << "idx_out=" << idx_out << " \n";
             PRIMITIVEVelocityController::stopRequest(ros::Time::now());
         } else {
             for (size_t i = 0; i < 7; ++i) {
