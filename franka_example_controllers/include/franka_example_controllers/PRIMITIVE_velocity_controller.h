@@ -73,6 +73,7 @@ namespace franka_example_controllers {
         std::array<double, 3> r_star_2 = r_star_0;
         std::array<double, 3> e_t = {0, 0, 0};
         std::array<double, 3> e_EE_target = {0, 0, 0};
+        std::array<double, 7> dq_max = {0.006981317008, 0.003490658504, 0.003490658504, 0.005235987756, 0.006981317008, 0.00872664626, 0.00872664626}; //dq_c [rad/1ms]
 
 
     };

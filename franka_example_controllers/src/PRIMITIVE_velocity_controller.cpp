@@ -151,74 +151,8 @@ namespace franka_example_controllers {
     }
 
     void PRIMITIVEVelocityController::update(const ros::Time &rosTime, const ros::Duration &period) {
-        /*
-        ////  uncomment for PRIMITIVE control
-        //  int mp = 5000;
-        for (size_t i = 0; i < 7; ++i) {
-            joints_vel_[i] = velocity_joint_handles_[i].getVelocity();
-        }
-        elapsed_time_ += period;
-        const double t_B = 3.000;
-        const double K_p = 0.1;
-        const double dq_star = 0.5* (3.14159265359 / 180);
-        if (elapsed_time_.toSec() >= t_B && elapsed_time_.toSec() < t_B+0.050) {
-//            dq_command[0] = K_p * (dq_star - joints_vel_[0]);
-//            dq_command[0] = dq_star;
-            dq_command[0] = dq_command[0] + 0.4* (3.14159265359 / 180);
-            dq_command[1] = dq_command[1] + 0.2* (3.14159265359 / 180);
-            dq_command[2] = dq_command[2] + 0.2* (3.14159265359 / 180);
-            dq_command[3] = dq_command[3] + 0.3* (3.14159265359 / 180);
-            dq_command[4] = dq_command[4] + 0.4* (3.14159265359 / 180);
-            dq_command[5] = dq_command[5] + 0.5* (3.14159265359 / 180);
-            dq_command[6] = dq_command[6] - 0.5* (3.14159265359 / 180);
-        }
-        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-//        if (PRIMITIVE_publisher_.trylock()) {
-            for (size_t i = 0; i < 7; ++i) {
-                PRIMITIVE_publisher_.msg_.dq_c[i] = dq_command[i];
-            }
-            PRIMITIVE_publisher_.msg_.header.stamp = rosTime;
-            PRIMITIVE_publisher_.msg_.header.seq = idx_command;
-            PRIMITIVE_publisher_.unlockAndPublish();
-        }
-        franka::RobotState robot_state = state_handle_->getRobotState();
-        Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
-        Eigen::Vector3d EEposition(transform.translation());
-        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-            for (size_t i = 0; i < 3; ++i) {
-                PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
-            }
-            PRIMITIVE_publisher_.unlockAndPublish();
-        }
-        if (debug) {
-            std::cout << "idx_command=" << idx_command << " \n";
-            std::cout << std::endl;
-        }
-        if (elapsed_time_.toSec() > 6) {
-            PRIMITIVEVelocityController::stopRequest(ros::Time::now());
-        } else {
-            for (size_t i = 0; i < 7; ++i) {
-                velocity_joint_handles_[i].setCommand(dq_command(i));
-            }
-        }
-        idx_command++;
-                points:
-                t               v
-              0               0
-              1               0.0003
-              2               0.001
-              3               0.004
-              5               0.008
-             10               0.015
-             20               0.02
-             30               0.02
-             60               0.02
-            120               0.02
-                5PL curve fitted (asymptotic sigmoidal nonlinear curve)
-        y = 0.02011276 + (-0.0003050539 - 0.02011276)/(1 + (x/16.15651)^1.732438)^4.038572
-         */
-        int mp = 1;
-        double ts = 0.001 * mp;
+        int mp = 10;
+        double dti1 = 0.001 * mp;
         //    TODO check joints_pose_ updates and i.c. is correct
         for (size_t i = 0; i < 7; ++i) {
             joints_pose_[i] = velocity_joint_handles_[i].getPosition();
@@ -226,42 +160,18 @@ namespace franka_example_controllers {
         franka::RobotState robot_state = state_handle_->getRobotState();
         Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
         Eigen::Vector3d EEposition(transform.translation());
-        if (idx_out % mp == 0) {
+        if (idx_i2 % mp == 0) {
             elapsed_time_ += period;
-//            if (std::signbit(r_star_tf[0] - r_star_0[0])) {
-//                v_star_2[0] = 0.01013542 +
-//                              (0.000001471537 - 0.01013542) / std::pow(1 + std::pow(t / 337.5456, 2.555158), 162339.9);
-//            } else {
-//                v_star_2[0] = -(0.01013542 + (0.000001471537 - 0.01013542) /
-//                                             std::pow(1 + std::pow(t / 337.5456, 2.555158), 162339.9));
-//            }
-//
-//            if (std::signbit(r_star_tf[1] - r_star_0[1])) {
-//                v_star_2[1] = 0.01013542 +
-//                              (0.000001471537 - 0.01013542) / std::pow(1 + std::pow(t / 337.5456, 2.555158), 162339.9);
-//            } else {
-//                v_star_2[1] = -(0.01013542 + (0.000001471537 - 0.01013542) /
-//                                             std::pow(1 + std::pow(t / 337.5456, 2.555158), 162339.9));
-//            }
-//
-//            if (std::signbit(r_star_tf[2] - r_star_0[2])) {
-//                v_star_2[2] = 0.01013542 +
-//                              (0.000001471537 - 0.01013542) / std::pow(1 + std::pow(t / 337.5456, 2.555158), 162339.9);
-//            } else {
-//                v_star_2[2] = -(0.01013542 + (0.000001471537 - 0.01013542) /
-//                                             std::pow(1 + std::pow(t / 337.5456, 2.555158), 162339.9));
-//            }
-//            y = 0.02011276 + (-0.0003050539 - 0.02011276)/(1 + (x/16.15651)^1.732438)^4.038572
-            if (idx_command > 5000) { ts = 0.005; }
+//            if (idx_i1 > 5000) { dti1 = 0.005; }
             double v_star_2_length = 0.02011276 + (-0.0003050539 - 0.02011276) /
-                                                  std::pow(1 + std::pow(idx_command / 16.15651, 1.732438), 4.038572);
+                                                  std::pow(1 + std::pow(idx_i1 / 16.15651, 1.732438), 4.038572);
             v_star_2[0] = v_star_2_length * (r_star_tf[0] - r_star_0[0]);
             v_star_2[1] = v_star_2_length * (r_star_tf[1] - r_star_0[1]);
             v_star_2[2] = v_star_2_length * (r_star_tf[2] - r_star_0[2]);
 
-            r_star_2[0] = ts * v_star_2[0] + r_star_2[0];
-            r_star_2[1] = ts * v_star_2[1] + r_star_2[1];
-            r_star_2[2] = ts * v_star_2[2] + r_star_2[2];
+            r_star_2[0] = dti1 * v_star_2[0] + r_star_2[0];
+            r_star_2[1] = dti1 * v_star_2[1] + r_star_2[1];
+            r_star_2[2] = dti1 * v_star_2[2] + r_star_2[2];
 
             std::array<double, 42> jacobian_array =
                     model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
@@ -278,32 +188,32 @@ namespace franka_example_controllers {
             Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
             double K_p = 40;
             double K_i = 40;
-//            e_t[0] = (r_star[idx_command][0] - EEposition(0));
-//            e_t[1] = (r_star[idx_command][1] - EEposition(1));
-//            e_t[2] = (r_star[idx_command][2] - EEposition(2));
+//            e_t[0] = (r_star[idx_i1][0] - EEposition(0));
+//            e_t[1] = (r_star[idx_i1][1] - EEposition(1));
+//            e_t[2] = (r_star[idx_i1][2] - EEposition(2));
             e_t[0] = (r_star_2[0] - EEposition(0));
             e_t[1] = (r_star_2[1] - EEposition(1));
             e_t[2] = (r_star_2[2] - EEposition(2));
             Eigen::Vector<double, 3> vc;
             //    double K_d=1;
 //            for (int i = 0; i < 3; ++i) {
-//                I_e[i] += e_t[i] * ts;
-//                vc(i) = v_star[idx_command][i] + K_p * e_t[i] +
-//                        K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*ts + K_d*(v_ref-v_e)
+//                I_e[i] += e_t[i] * dti1;
+//                vc(i) = v_star[idx_i1][i] + K_p * e_t[i] +
+//                        K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*dti1 + K_d*(v_ref-v_e)
 //            }
             for (int i = 0; i < 3; ++i) {
-                I_e[i] += e_t[i] * ts;
+                I_e[i] += e_t[i] * dti1;
                 vc(i) = v_star_2[i] + K_p * e_t[i] +
-                        K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*ts + K_d*(v_ref-v_e)
+                        K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*dti1 + K_d*(v_ref-v_e)
             }
             pseudoInverse(J_translation, J_translation_pinv);
             dq_command = J_translation_pinv * vc;
-            //  TODO should idx_command be updated here or end of call?
-            idx_command += 1;
+            //  TODO should idx_i1 be updated here or end of call?
+            idx_i1 += 1;
 
             if (debug) {
 
-                std::cout << "**************************************************idx_command=" << idx_command
+                std::cout << "**************************************************idx_i1=" << idx_i1
                           << " \n";
                 std::cout << "period=" << period << " \n";
                 std::cout << "transform=\n";
@@ -322,7 +232,7 @@ namespace franka_example_controllers {
                 std::cout << std::endl;
                 std::cout << "dq=" << dq;
                 std::cout << std::endl;
-                std::cout << "@@@@@@@@@r_star[idx_command][0]=" << r_star[idx_command][0];
+                std::cout << "@@@@@@@@@r_star[idx_i1][0]=" << r_star[idx_i1][0];
                 std::cout << std::endl;
                 std::cout << "e_t[0]=" << e_t[0];
                 std::cout << std::endl;
@@ -373,8 +283,8 @@ namespace franka_example_controllers {
         }
         if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
             for (size_t i = 0; i < 3; ++i) {
-                PRIMITIVE_publisher_.msg_.r_star[i] = r_star[idx_command][i];
-                PRIMITIVE_publisher_.msg_.v_star[i] = v_star[idx_command][i];
+                PRIMITIVE_publisher_.msg_.r_star[i] = r_star[idx_i1][i];
+                PRIMITIVE_publisher_.msg_.v_star[i] = v_star[idx_i1][i];
                 PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
             }
             PRIMITIVE_publisher_.unlockAndPublish();
@@ -389,10 +299,7 @@ namespace franka_example_controllers {
             accum += e_EE_target[i] * e_EE_target[i];
         }
         double norm_e_EE_t = sqrt(accum);
-//        if (idx_command >= Target_Traj_ROWS - mp) {
-//        std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
-//        std::cout << "idx_out=" << idx_out << " \n";
-        if (norm_e_EE_t < 0.001 && idx_out > 1000) {
+        if (norm_e_EE_t < 0.001 && idx_i2 > 1000) {
             std::cout << "STOPPING!!!!!!!!!!!!!!!!" << " \n";
             std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
             std::cout << "*******1-EEposition=\n";
@@ -400,7 +307,7 @@ namespace franka_example_controllers {
                 std::cout << EEposition(i) << " ";
                 std::cout << std::endl;
             }
-            std::cout << "idx_out=" << idx_out << " \n";
+            std::cout << "idx_i2=" << idx_i2 << " \n";
             PRIMITIVEVelocityController::stopRequest(ros::Time::now());
         } else {
             for (size_t i = 0; i < 7; ++i) {
@@ -408,9 +315,13 @@ namespace franka_example_controllers {
             }
         }
 
-        idx_out += 1;
+        idx_i2 += 1;
         if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
             for (size_t i = 0; i < 7; ++i) {
+                // inner loop 1: ds_i1=1ms (1000 Hz)
+                if (dq_command(i)>dq_max[i]){
+                    dq_command(i)=dq_max[i];
+                }
                 PRIMITIVE_publisher_.msg_.dq_c[i] = dq_command(i);
             }
             PRIMITIVE_publisher_.unlockAndPublish();
