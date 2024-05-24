@@ -48,8 +48,8 @@ namespace franka_example_controllers {
         std::array<double, 7> joints_vel_{};
         std::array<double, 16> initial_O_T_EE_{};
         std::unique_ptr <franka_hw::FrankaStateHandle> state_handle_;  // seems to be franka_states
-        int idx_command = 0;
-        int idx_out = 1;
+        int idx_i1 = 0;
+        int idx_i2 = 1;
         std::array<double, 3> I_e = {0, 0, 0};
         franka_hw::TriggerRate rate_trigger_{1000.0};
         realtime_tools::RealtimePublisher <PRIMITIVEmessages> PRIMITIVE_publisher_;
