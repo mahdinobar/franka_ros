@@ -151,7 +151,10 @@ namespace franka_example_controllers {
     }
 
     void PRIMITIVEVelocityController::update(const ros::Time &rosTime, const ros::Duration &period) {
-        int mp = 10;
+        int mp = 1;
+        if (idx_i2 > 100) {
+            mp = 5;
+        }
         double dti1 = 0.001 * mp;
         //    TODO check joints_pose_ updates and i.c. is correct
         for (size_t i = 0; i < 7; ++i) {
@@ -165,9 +168,18 @@ namespace franka_example_controllers {
 //            if (idx_i1 > 5000) { dti1 = 0.005; }
             double v_star_2_length = 0.02011276 + (-0.0003050539 - 0.02011276) /
                                                   std::pow(1 + std::pow(idx_i1 / 16.15651, 1.732438), 4.038572);
-            v_star_2[0] = v_star_2_length * (r_star_tf[0] - r_star_0[0]);
-            v_star_2[1] = v_star_2_length * (r_star_tf[1] - r_star_0[1]);
-            v_star_2[2] = v_star_2_length * (r_star_tf[2] - r_star_0[2]);
+
+            // l2-norm
+            double accum = 0.;
+            for (int i = 0; i < 3; ++i) {
+                v_star_2[i] = (r_star_tf[i] - r_star_0[i]);
+                accum += v_star_2[i] * v_star_2[i];
+            }
+            double norm_v_star_2 = sqrt(accum);
+
+            for (int i = 0; i < 3; ++i) {
+                v_star_2[i] = v_star_2[i] / norm_v_star_2 * v_star_2_length;
+            }
 
             r_star_2[0] = dti1 * v_star_2[0] + r_star_2[0];
             r_star_2[1] = dti1 * v_star_2[1] + r_star_2[1];
@@ -319,8 +331,9 @@ namespace franka_example_controllers {
         if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
             for (size_t i = 0; i < 7; ++i) {
                 // inner loop 1: ds_i1=1ms (1000 Hz)
-                if (dq_command(i)>dq_max[i]){
-                    dq_command(i)=dq_max[i];
+                if (dq_command(i) > dq_max[i]) {
+                    std::cout << "-------NOOOOOOOOOOOO=" << i << dq_command(i) << "\n";
+                    dq_command(i) = dq_max[i];
                 }
                 PRIMITIVE_publisher_.msg_.dq_c[i] = dq_command(i);
             }
