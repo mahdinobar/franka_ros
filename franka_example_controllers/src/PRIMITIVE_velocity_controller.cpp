@@ -152,7 +152,7 @@ namespace franka_example_controllers {
 
     void PRIMITIVEVelocityController::update(const ros::Time &rosTime, const ros::Duration &period) {
         int mp = 1;
-        if (idx_i2 > 100) {
+        if (idx_i2 > 500) {
             mp = 5;
         }
         double dti1 = 0.001 * mp;
