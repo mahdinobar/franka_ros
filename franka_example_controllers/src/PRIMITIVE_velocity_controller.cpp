@@ -21,11 +21,18 @@
 #include <iostream>
 #include <string>
 #include "/usr/local/MATLAB/R2023b/extern/include/mat.h"
+#include "geometry_msgs/Vector3.h"
+#include "rosrt/rosrt.h"
 
 namespace franka_example_controllers {
+    void CameraChatterCallback(geometry_msgs::Vector3 msg) {
+        std::cout << "+++++++++++++++++++++I heard p_obj_ca+++++++++++++++++++++" << "\n";
+        std::cout << "msg=" << msg << "\n";
+    }
 
     bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW *robot_hardware,
                                            ros::NodeHandle &node_handle) {
+//        Node_handle=&node_handle;
         velocity_joint_interface_ = robot_hardware->get<hardware_interface::VelocityJointInterface>();
         if (velocity_joint_interface_ == nullptr) {
             ROS_ERROR("PRIMITIVEVelocityController: Error getting position joint interface from hardware!");
@@ -84,6 +91,12 @@ namespace franka_example_controllers {
             return false;
         }
         PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1e6, false);
+//        rosrt::init();
+//        rosrt::Subscriber <geometry_msgs::Vector3> sub(3, node_handle, "p_obj_ca");
+
+//            ros::NodeHandle node_handle;
+
+//        ros::Subscriber sub = node_handle.subscribe("p_obj_ca", 1000, CameraChatterCallback);
         return true;
     }
 
@@ -150,10 +163,17 @@ namespace franka_example_controllers {
         }
     }
 
+
     void PRIMITIVEVelocityController::update(const ros::Time &rosTime, const ros::Duration &period) {
         int mp = 1;
-        if (idx_i2 > 500) {
-            mp = 5;
+//        ros::NodeHandle private_node_handle("~");
+//        rosrt::Subscriber <geometry_msgs::Vector3> sub(3, private_node_handle, "p_obj_ca");
+//        geometry_msgs::Vector3ConstPtr msg = sub.poll();
+//        if (msg) {
+//            std::cout << "HELLOOOOOOOOOOOOOOOOOOOOOO" << "\n";
+//        }
+        if (idx_i2 > 100) {
+            mp = 10;
         }
         double dti1 = 0.001 * mp;
         //    TODO check joints_pose_ updates and i.c. is correct
@@ -163,6 +183,21 @@ namespace franka_example_controllers {
         franka::RobotState robot_state = state_handle_->getRobotState();
         Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
         Eigen::Vector3d EEposition(transform.translation());
+        if (idx_i2 % (mp * 100) == 0) {
+            try {
+                    ros::NodeHandle private_node_handle("~");
+                    ros::Subscriber sub = private_node_handle.subscribe("p_obj_ca", 10, franka_example_controllers::CameraChatterCallback);
+//                    ros::NodeHandle private_node_handle("~");
+//                    rosrt::Subscriber <geometry_msgs::Vector3> sub(3, private_node_handle, "p_obj_ca");
+//                    geometry_msgs::Vector3ConstPtr msg = sub.poll();
+//                    if (msg) {
+//                        std::cout << "HELLOOOOOOOOOOOOOOOOOOOOOO" << "\n";
+//                    }
+//                    std::cout << "I am here!" << "\n";
+            } catch (int N) {
+                std::cout << "-------------------CANNOT heard p_obj_ca---------------------" << "\n";
+            }
+        }
         if (idx_i2 % mp == 0) {
             elapsed_time_ += period;
 //            if (idx_i1 > 5000) { dti1 = 0.005; }
