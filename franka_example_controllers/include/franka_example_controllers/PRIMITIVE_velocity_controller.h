@@ -19,6 +19,9 @@
 #include <Eigen/Dense>
 #include <fstream>
 #include <iostream>
+#include <realtime_tools/realtime_buffer.h>
+#include "geometry_msgs/Vector3.h"
+
 
 namespace franka_example_controllers {
 
@@ -27,6 +30,8 @@ namespace franka_example_controllers {
             hardware_interface::VelocityJointInterface,
             franka_hw::FrankaStateInterface> {
     public:
+        PRIMITIVEVelocityController();
+
         bool init(hardware_interface::RobotHW *robot_hardware, ros::NodeHandle &node_handle) override;
 
         void starting(const ros::Time &) override;
@@ -53,6 +58,20 @@ namespace franka_example_controllers {
         std::array<double, 3> I_e = {0, 0, 0};
         franka_hw::TriggerRate rate_trigger_{1000.0};
         realtime_tools::RealtimePublisher <PRIMITIVEmessages> PRIMITIVE_publisher_;
+
+        struct Commands
+        {
+            double x;
+            double y;
+            double z;
+            ros::Time stamp;
+            Commands() : x(55.0),y(66.0),z(77.0), stamp(0.0) {}
+        };
+        realtime_tools::RealtimeBuffer<Commands> command_;
+        Commands command_struct_;
+        ros::Subscriber sub_command_;
+        bool allow_multiple_cmd_vel_publishers_;
+
         const bool debug = false;
         static const int Target_Traj_ROWS = 6381;
         static const int Target_Traj_COLUMNS = 3;
@@ -75,6 +94,7 @@ namespace franka_example_controllers {
         std::array<double, 3> e_EE_target = {0, 0, 0};
         std::array<double, 7> dq_max = {0.006981317008, 0.003490658504, 0.003490658504, 0.005235987756, 0.006981317008, 0.00872664626, 0.00872664626}; //dq_c [rad/1ms]
 
+        void cmdVelCallback(const geometry_msgs::Vector3& command);
 
     };
 

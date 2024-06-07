@@ -23,15 +23,24 @@
 #include "/usr/local/MATLAB/R2023b/extern/include/mat.h"
 #include "geometry_msgs/Vector3.h"
 #include "rosrt/rosrt.h"
+#include <ros/callback_queue.h>
 
 namespace franka_example_controllers {
     void CameraChatterCallback(geometry_msgs::Vector3 msg) {
+//        void chatterCallback(const std_msgs::String::ConstPtr& msg)
+//        {
+        ROS_INFO("I heard??????????");
+//        }
         std::cout << "+++++++++++++++++++++I heard p_obj_ca+++++++++++++++++++++" << "\n";
         std::cout << "msg=" << msg << "\n";
     }
 
+    PRIMITIVEVelocityController::PRIMITIVEVelocityController()
+            : command_struct_() {}
+
     bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW *robot_hardware,
                                            ros::NodeHandle &node_handle) {
+
 //        Node_handle=&node_handle;
         velocity_joint_interface_ = robot_hardware->get<hardware_interface::VelocityJointInterface>();
         if (velocity_joint_interface_ == nullptr) {
@@ -91,12 +100,15 @@ namespace franka_example_controllers {
             return false;
         }
         PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1e6, false);
+
 //        rosrt::init();
 //        rosrt::Subscriber <geometry_msgs::Vector3> sub(3, node_handle, "p_obj_ca");
 
 //            ros::NodeHandle node_handle;
 
 //        ros::Subscriber sub = node_handle.subscribe("p_obj_ca", 1000, CameraChatterCallback);
+        sub_command_ = node_handle.subscribe("p_obj_ca", 100,
+                                             &PRIMITIVEVelocityController::cmdVelCallback, this);
         return true;
     }
 
@@ -163,6 +175,31 @@ namespace franka_example_controllers {
         }
     }
 
+    void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3 &command) {
+//        try {
+//            // check that we don't have multiple publishers on the command topic
+//            if (!allow_multiple_cmd_vel_publishers_ && sub_command_.getNumPublishers() > 1) {
+////                ROS_ERROR_STREAM_THROTTLE_NAMED(1.0, name_, "Detected " << sub_command_.getNumPublishers()
+////                                                                        << " publishers. Only 1 publisher is allowed. Going to brake.");
+//                ROS_INFO("Only 1 publisher is allowed. Going to brake.");
+//                PRIMITIVEVelocityController::stopRequest(ros::Time::now());
+//                return;
+//            }
+
+        command_struct_.x = command.x;
+        command_struct_.y = command.y;
+        command_struct_.z = command.z;
+        command_struct_.stamp = ros::Time::now();
+        command_.writeFromNonRT(command_struct_);
+        ROS_INFO("Added values to command. command.x=%f", command.x);
+        std::cout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" << "\n";
+
+//        } catch(int i) {
+//            ROS_INFO("Can't accept new commands. Controller is not running.");
+//            std::cout << "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB" << "\n";
+//
+//        }
+    }
 
     void PRIMITIVEVelocityController::update(const ros::Time &rosTime, const ros::Duration &period) {
         int mp = 1;
@@ -183,10 +220,43 @@ namespace franka_example_controllers {
         franka::RobotState robot_state = state_handle_->getRobotState();
         Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
         Eigen::Vector3d EEposition(transform.translation());
+
+
         if (idx_i2 % (mp * 100) == 0) {
             try {
-                    ros::NodeHandle private_node_handle("~");
-                    ros::Subscriber sub = private_node_handle.subscribe("p_obj_ca", 10, franka_example_controllers::CameraChatterCallback);
+                ros::NodeHandle private_node_handle("~");
+                boost::shared_ptr < geometry_msgs::Vector3 const> sharedEdge;
+                geometry_msgs::Vector3 edge;
+                sharedEdge = ros::topic::waitForMessage<geometry_msgs::Vector3>("/p_obj_ca", private_node_handle);
+                if (sharedEdge != NULL) {
+                    edge = *sharedEdge;
+                    if (idx_i2 % (mp * 500) == 0) {
+                        std::cout << "edge.x=" << edge.x << "\n";
+                    }
+                }
+
+//                ros::NodeHandle private_node_handle("~");
+//                ros::Subscriber sub = private_node_handle.subscribe("/p_obj_ca", 1000, CameraChatterCallback);
+//                std::cout << "idx_i2=" << idx_i2 << "\n";
+//                ros::getGlobalCallbackQueue()->callAvailable(ros::WallDuration(0));
+
+
+//                rosrt::init();
+//                ros::NodeHandle private_node_handle("~");
+//                rosrt::Subscriber<geometry_msgs::Vector3> sub(3, private_node_handle, "p_obj_ca");
+//                geometry_msgs::Vector3 msg = sub.poll();
+//                std::cout << "msgggggggggggggggggggg=" << msg.x << "\n";
+
+
+//                Commands curr_cmd = *(command_.readFromRT());
+//                std::cout << "++++++++++++curr_cmd.x=" << curr_cmd.x << "\n";
+
+//                ros::spinOnce();
+
+//                ros::getGlobalCallbackQueue()->callAvailable(ros::WallDuration(0));
+//                ros::NodeHandle private_node_handle("~");
+//                ros::Subscriber sub = private_node_handle.subscribe("p_obj_ca", 10, CameraChatterCallback);
+//                ros::spinOnce();
 //                    ros::NodeHandle private_node_handle("~");
 //                    rosrt::Subscriber <geometry_msgs::Vector3> sub(3, private_node_handle, "p_obj_ca");
 //                    geometry_msgs::Vector3ConstPtr msg = sub.poll();
@@ -381,6 +451,7 @@ namespace franka_example_controllers {
         // A JUMP TO ZERO WILL BE COMMANDED PUTTING HIGH LOADS ON THE ROBOT. LET THE DEFAULT
         // BUILT-IN STOPPING BEHAVIOR SLOW DOWN THE ROBOT.
     }
+
 
 }  // namespace franka_example_controllers
 

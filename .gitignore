@@ -1,3 +1,5 @@
 *.pyc
 .idea
 debug_test
+franka_example_controllers/src/test.cpp
+franka_example_controllers/src/test.h
