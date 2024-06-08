@@ -107,8 +107,10 @@ namespace franka_example_controllers {
 //            ros::NodeHandle node_handle;
 
 //        ros::Subscriber sub = node_handle.subscribe("p_obj_ca", 1000, CameraChatterCallback);
-        sub_command_ = node_handle.subscribe("p_obj_ca", 100,
+        sub_command_ = node_handle.subscribe("/p_obj_ca", 100,
                                              &PRIMITIVEVelocityController::cmdVelCallback, this);
+        ros::spinOnce();
+
         return true;
     }
 
@@ -191,8 +193,8 @@ namespace franka_example_controllers {
         command_struct_.z = command.z;
         command_struct_.stamp = ros::Time::now();
         command_.writeFromNonRT(command_struct_);
-        ROS_INFO("Added values to command. command.x=%f", command.x);
-        std::cout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" << "\n";
+//        ROS_INFO("Added values to command. command.x=%f", command.x);
+//        std::cout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" << "\n";
 
 //        } catch(int i) {
 //            ROS_INFO("Can't accept new commands. Controller is not running.");
@@ -224,16 +226,16 @@ namespace franka_example_controllers {
 
         if (idx_i2 % (mp * 100) == 0) {
             try {
-                ros::NodeHandle private_node_handle("~");
-                boost::shared_ptr < geometry_msgs::Vector3 const> sharedEdge;
-                geometry_msgs::Vector3 edge;
-                sharedEdge = ros::topic::waitForMessage<geometry_msgs::Vector3>("/p_obj_ca", private_node_handle);
-                if (sharedEdge != NULL) {
-                    edge = *sharedEdge;
-                    if (idx_i2 % (mp * 500) == 0) {
-                        std::cout << "edge.x=" << edge.x << "\n";
-                    }
-                }
+//                ros::NodeHandle private_node_handle("~");
+//                boost::shared_ptr < geometry_msgs::Vector3 const> sharedEdge;
+//                geometry_msgs::Vector3 edge;
+//                sharedEdge = ros::topic::waitForMessage<geometry_msgs::Vector3>("/p_obj_ca", private_node_handle);
+//                if (sharedEdge != NULL) {
+//                    edge = *sharedEdge;
+//                    if (idx_i2 % (mp * 500) == 0) {
+//                        std::cout << "edge.x=" << edge.x << "\n";
+//                    }
+//                }
 
 //                ros::NodeHandle private_node_handle("~");
 //                ros::Subscriber sub = private_node_handle.subscribe("/p_obj_ca", 1000, CameraChatterCallback);
@@ -248,8 +250,8 @@ namespace franka_example_controllers {
 //                std::cout << "msgggggggggggggggggggg=" << msg.x << "\n";
 
 
-//                Commands curr_cmd = *(command_.readFromRT());
-//                std::cout << "++++++++++++curr_cmd.x=" << curr_cmd.x << "\n";
+                Commands curr_cmd = *(command_.readFromRT());
+                std::cout << "++++++++++++curr_cmd.x=" << curr_cmd.x << "\n";
 
 //                ros::spinOnce();
 
