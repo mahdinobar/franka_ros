@@ -104,5 +104,6 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
                                        {0.0, 0.0, 0.0, 1.0}};
   void cmdVelCallback(const geometry_msgs::Vector3& data);
   void cmdVelCallback2(const std_msgs::Float64MultiArray& command);
+  Eigen::Matrix<double, 4, 4> T_ca_ftc2;
 };
 }  // namespace franka_example_controllers

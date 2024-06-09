@@ -31,8 +31,8 @@ void CameraChatterCallback(geometry_msgs::Vector3 msg) {
   std::cout << "msg=" << msg << "\n";
 }
 
-PRIMITIVEVelocityController::PRIMITIVEVelocityController() : command_struct_(), command_struct_2_(){}
-
+PRIMITIVEVelocityController::PRIMITIVEVelocityController()
+    : command_struct_(), command_struct_2_() {}
 
 void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3& data) {
   command_struct_.x = data.x;
@@ -185,22 +185,30 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
   Eigen::Vector3d EEposition(transform.translation());
 
-//  Eigen::Affine3d T_F_ftc2(Eigen::Matrix4d::Map(T_F_ftc2_raw));
-  Eigen::Map<Eigen::Matrix<double, 4, 4>> T_o_F(robot_state.O_T_EE.data());
-  Eigen::Matrix4d T_O_ftc2 = T_o_F * T_F_ftc2;
+  //  Eigen::Affine3d T_F_ftc2(Eigen::Matrix4d::Map(T_F_ftc2_raw));
 
   if (idx_i2 % (mp * 100) == 0) {
     try {
       Commands curr_cmd = *(command_.readFromRT());
-      std::cout << "++++++++++++curr_cmd.x=" << curr_cmd.x << "\n";
+      std::cout << "+curr_cmd.x=" << curr_cmd.x << "\n";
     } catch (int N) {
-      std::cout << "CANNOT heard p_obj_ca!!!!!!!!!!!!!" << "\n";
+      std::cout << "CANNOT heard p_obj_ca!" << "\n";
     }
     try {
       Commands2 curr_cmd2 = *(command_2_.readFromRT());
-      std::cout << "++++++++++++curr_cmd2.data[0]=" << curr_cmd2.data[0] << "\n";
+      std::cout << "+curr_cmd2.data[0]=" << curr_cmd2.data[0] << "\n";
+      Eigen::Map<Eigen::Matrix<double, 4, 4>> T_o_F(robot_state.O_T_EE.data());
+      Eigen::Matrix4d T_o_ftc2 = T_o_F * T_F_ftc2;
+      for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+          T_ca_ftc2(j, i) = curr_cmd2.data[i + j];
+        }
+      }
+      //    Eigen::Map<Eigen::Matrix<double, 4, 4>> T_ca_ftc2(curr_cmd2.data);
+      Eigen::Matrix4d T_ca_o = T_ca_ftc2 * T_o_ftc2.inverse();
+      std::cout << "++++++++++++T_ca_o=" << T_ca_o << "\n";
     } catch (int N) {
-      std::cout << "-------------------CANNOT heard T_ca_ftc2---------------------" << "\n";
+      std::cout << "-CANNOT heard T_ca_ftc2-" << "\n";
     }
   }
   if (idx_i2 % mp == 0) {
