@@ -190,13 +190,16 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   if (idx_i2 % (mp * 100) == 0) {
     try {
       Commands curr_cmd = *(command_.readFromRT());
-      std::cout << "+curr_cmd.x=" << curr_cmd.x << "\n";
+//      std::cout << "+curr_cmd.x=" << curr_cmd.x << "\n";
+      p_obj_ca(0)=curr_cmd.x;
+      p_obj_ca(1)=curr_cmd.y;
+      p_obj_ca(2)=curr_cmd.z;
     } catch (int N) {
       std::cout << "CANNOT heard p_obj_ca!" << "\n";
     }
     try {
       Commands2 curr_cmd2 = *(command_2_.readFromRT());
-      std::cout << "+curr_cmd2.data[0]=" << curr_cmd2.data[0] << "\n";
+//      std::cout << "+curr_cmd2.data[0]=" << curr_cmd2.data[0] << "\n";
       Eigen::Map<Eigen::Matrix<double, 4, 4>> T_o_F(robot_state.O_T_EE.data());
       Eigen::Matrix4d T_o_ftc2 = T_o_F * T_F_ftc2;
       for (int i = 0; i < 4; ++i) {
@@ -206,7 +209,10 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       }
       //    Eigen::Map<Eigen::Matrix<double, 4, 4>> T_ca_ftc2(curr_cmd2.data);
       Eigen::Matrix4d T_ca_o = T_ca_ftc2 * T_o_ftc2.inverse();
-      std::cout << "++++++++++++T_ca_o=" << T_ca_o << "\n";
+      Eigen::Affine3d transform_T_ca_o(T_ca_o);
+      p_obj_o = transform_T_ca_o * p_obj_ca;
+      std::cout << "+p_obj_o=" << p_obj_o << "\n";
+//      std::cout << "++++++++++++T_ca_o=" << T_ca_o << "\n";
     } catch (int N) {
       std::cout << "-CANNOT heard T_ca_ftc2-" << "\n";
     }
