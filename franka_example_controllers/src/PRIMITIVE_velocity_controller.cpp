@@ -112,6 +112,21 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   sub_command_2_ =
       node_handle.subscribe("/T_ca_ftc2", 100, &PRIMITIVEVelocityController::cmdVelCallback2, this);
   ros::spinOnce();
+
+  //  franka::RobotState robot_state = state_handle_->getRobotState();
+  //  Eigen::Map<Eigen::Matrix<double, 4, 4>> T_o_F(robot_state.O_T_EE.data());
+  //  //    Eigen::Map<Eigen::Matrix<double, 4, 4>> T_ca_ftc2(curr_cmd2.data);
+  //  Eigen::Matrix4d T_F_o = T_o_F.inverse();
+  //  Eigen::Transform<double, 3, Eigen::Affine> transform(T_F_o);
+  ////  Eigen::Affine3d transform_T_F_o(T_F_o);
+  //  p_ftc2_o = transform * p_Ftoftc2_F;
+  //  r_star_tf[0] = p_ftc2_o(0);
+  //  r_star_tf[1] = p_ftc2_o(1);
+  //  r_star_tf[2] = p_ftc2_o(2);
+  //  std::cout << "T_F_o=" << T_F_o << std::endl;
+  //  std::cout << "p_Ftoftc2_F=" << p_Ftoftc2_F << std::endl;
+  //  std::cout << "p_ftc2_o=" << p_ftc2_o << std::endl;
+
   return true;
 }
 
@@ -184,22 +199,44 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   franka::RobotState robot_state = state_handle_->getRobotState();
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
   Eigen::Vector3d EEposition(transform.translation());
+//  Eigen::Matrix3d rotation1(transform1.rotation());
+//  std::cout << "EEposition_original=" << EEposition1 << std::endl;
+//  std::cout << "rotation1=" << rotation1 << std::endl;
+//  Eigen::Vector3d EEposition2 =
+//      rotation1.transpose() * p_Ftoftc2_F - rotation1.transpose() * EEposition1;
+//  std::cout << "EEposition2=" << EEposition2 << std::endl;
+//  Eigen::Vector3d EEposition3 = rotation1.inverse() * (p_Ftoftc2_F - EEposition1);
+//  std::cout << "EEposition3=" << EEposition3 << std::endl;
+//  Eigen::Vector3d EEposition4 = rotation1 * p_Ftoftc2_F + EEposition1;
+//  std::cout << "EEposition4=" << EEposition4 << std::endl;
+
+  //  franka::RobotState robot_state = state_handle_->getRobotState();
+//  Eigen::Map<Eigen::Matrix<double, 4, 4>> T_o_F(robot_state.O_T_EE.data());
+//  Eigen::Matrix4d T_F_o = T_o_F.inverse();
+//  Eigen::Transform<double, 3, Eigen::Affine> transform(T_F_o);
+//  Eigen::Vector3d EEposition = transform * p_Ftoftc2_F;
+  //  std::cout << "T_o_F=" << T_o_F << std::endl;
+  //  std::cout << "T_F_o=" << T_F_o << std::endl;
+//    std::cout << "EEposition=" << EEposition << std::endl;
+
+  Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
+  Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
 
   //  Eigen::Affine3d T_F_ftc2(Eigen::Matrix4d::Map(T_F_ftc2_raw));
 
   if (idx_i2 % (mp * 100) == 0) {
     try {
       Commands curr_cmd = *(command_.readFromRT());
-//      std::cout << "+curr_cmd.x=" << curr_cmd.x << "\n";
-      p_obj_ca(0)=curr_cmd.x;
-      p_obj_ca(1)=curr_cmd.y;
-      p_obj_ca(2)=curr_cmd.z;
+      //      std::cout << "+curr_cmd.x=" << curr_cmd.x << "\n";
+      p_obj_ca(0) = curr_cmd.x;
+      p_obj_ca(1) = curr_cmd.y;
+      p_obj_ca(2) = curr_cmd.z;
     } catch (int N) {
       std::cout << "CANNOT heard p_obj_ca!" << "\n";
     }
     try {
       Commands2 curr_cmd2 = *(command_2_.readFromRT());
-//      std::cout << "+curr_cmd2.data[0]=" << curr_cmd2.data[0] << "\n";
+      //      std::cout << "+curr_cmd2.data[0]=" << curr_cmd2.data[0] << "\n";
       Eigen::Map<Eigen::Matrix<double, 4, 4>> T_o_F(robot_state.O_T_EE.data());
       Eigen::Matrix4d T_o_ftc2 = T_o_F * T_F_ftc2;
       for (int i = 0; i < 4; ++i) {
@@ -212,7 +249,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       Eigen::Affine3d transform_T_ca_o(T_ca_o);
       p_obj_o = transform_T_ca_o * p_obj_ca;
       std::cout << "+p_obj_o=" << p_obj_o << "\n";
-//      std::cout << "++++++++++++T_ca_o=" << T_ca_o << "\n";
+      //      std::cout << "++++++++++++T_ca_o=" << T_ca_o << "\n";
     } catch (int N) {
       std::cout << "-CANNOT heard T_ca_ftc2-" << "\n";
     }
@@ -222,6 +259,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     double v_star_2_length =
         0.02011276 + (-0.0003050539 - 0.02011276) /
                          std::pow(1 + std::pow(idx_i1 / 16.15651, 1.732438), 4.038572);
+
+    //      std::cout << "+curr_cmd2.data[0]=" << curr_cmd2.data[0] << "\n";
+
     // l2-norm
     double accum = 0.;
     for (int i = 0; i < 3; ++i) {
@@ -243,14 +283,14 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
     Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
     Eigen::MatrixXd J_translation_pinv;
-    franka::RobotState robot_state = state_handle_->getRobotState();
-    Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
-    Eigen::Vector3d EEposition(transform.translation());
-    Eigen::Quaterniond orientation(transform.rotation());
-    Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
-    Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
-    double K_p = 40;
-    double K_i = 40;
+    //    franka::RobotState robot_state = state_handle_->getRobotState();
+    //    Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
+    //    Eigen::Vector3d EEposition(transform.translation());
+    //    Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
+    //    Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
+    double K_p = 20;
+    double K_i = 20;
+
     e_t[0] = (r_star_2[0] - EEposition(0));
     e_t[1] = (r_star_2[1] - EEposition(1));
     e_t[2] = (r_star_2[2] - EEposition(2));
@@ -360,11 +400,12 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
     std::cout << "idx_i2=" << idx_i2 << " \n";
     PRIMITIVEVelocityController::stopRequest(ros::Time::now());
-  } else {
-    for (size_t i = 0; i < 7; ++i) {
-      velocity_joint_handles_[i].setCommand(dq_command(i));
-    }
   }
+    else {
+      for (size_t i = 0; i < 7; ++i) {
+        velocity_joint_handles_[i].setCommand(dq_command(i));
+      }
+    }
   idx_i2 += 1;
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
     for (size_t i = 0; i < 7; ++i) {

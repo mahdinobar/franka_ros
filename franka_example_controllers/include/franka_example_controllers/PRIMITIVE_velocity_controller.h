@@ -88,8 +88,12 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   std::array<double, 7> q_start{
       {-0.00155713, -0.7739, -0.00012461, -2.38384, -0.00188551, 1.56271, 0.806219}};
   Eigen::Matrix<double, 7, 1> dq_command = {0, 0, 0, 0, 0, 0, 0};
-  std::array<double, 3> r_star_0 = {0.307926, -0.000730912, 0.573038};
-  std::array<double, 3> r_star_tf = {0.465203, -0.237464, 0.168568};
+  //  std::array<double, 3> r_star_0 = {0.307926, -0.000730912, 0.573038};
+  //  std::array<double, 3> r_star_0 = {0.299695, 0.000269037, 0.463173};
+  std::array<double, 3> r_star_0 = {0.30587, -0.00013972, 0.46695};
+
+  //  std::array<double, 3> r_star_tf = {0.465203, -0.237464, 0.168568};
+  std::array<double, 3> r_star_tf = {+0.6250, -0.5250, +0.0250};
   double v_star_2[3];
   std::array<double, 3> r_star_2 = r_star_0;
   std::array<double, 3> e_t = {0, 0, 0};
@@ -107,5 +111,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::Matrix<double, 4, 4> T_ca_ftc2;
   Eigen::Vector<double, 3> p_obj_o = {0, 0, 0};
   Eigen::Vector<double, 3> p_obj_ca = {0, 0, 0};
+  //  Eigen::Vector<double, 3> p_Ftoftc2_F = {0, 0, +0.1124};
+  //  Eigen::Vector<double, 3> p_ftc2_o = {0, 0, 0};
 };
 }  // namespace franka_example_controllers
