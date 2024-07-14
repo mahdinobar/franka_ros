@@ -102,13 +102,21 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
                                   0.006981317008, 0.00872664626,  0.00872664626};  // dq_c [rad/1ms]
   //  Eigen::Matrix<double, 16, 1> T_F_ftc2_raw = {0.707, -0.707, 0, 0, 0.707, 0.707, 0, 0, 0, 0, 1,
   //  0, 0, 0, 0.1124, 1};
-  Eigen::Matrix<double, 4, 4> T_F_ftc2{{0.707, 0.707, 0.0, 0.0},
-                                       {-0.707, 0.707, 0.0, 0.0},
-                                       {0.0, 0.0, 1.0, 0.1124},
-                                       {0.0, 0.0, 0.0, 1.0}};
+//  Eigen::Matrix<double, 4, 4> T_F_ftc2{{0.707, 0.707, 0.0, 0.0},
+//                                       {-0.707, 0.707, 0.0, 0.0},
+//                                       {0.0, 0.0, 1.0, 0.1124},
+//                                       {0.0, 0.0, 0.0, 1.0}};
+//  Eigen::Matrix<double, 4, 4> T_ftc2_ftc{{1.0, 0.0, 0.0, 0.0},
+//                                       {0, 1, 0, 0},
+//                                       {0, 0, 1, -0.009},
+//                                       {0, 0, 0, 1}};
+  Eigen::Matrix<double, 4, 4> T_ftc2_ftc{{1.0, 0.0, 0.0, 0.0},
+                                       {0, 1, 0, 0},
+                                       {0, 0, 1, 0},
+                                       {0, 0, 0, 1}};
   void cmdVelCallback(const geometry_msgs::Vector3& data);
   void cmdVelCallback2(const std_msgs::Float64MultiArray& command);
-  Eigen::Matrix<double, 4, 4> T_ca_ftc2;
+  Eigen::Matrix<double, 4, 4> T_ca_ftc;
   Eigen::Vector<double, 3> p_obj_o = {0, 0, 0};
   Eigen::Vector<double, 3> p_obj_ca = {0, 0, 0};
   //  Eigen::Vector<double, 3> p_Ftoftc2_F = {0, 0, +0.1124};
