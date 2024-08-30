@@ -55,6 +55,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_;  // seems to be franka_states
   int idx_i1 = 0;
   int idx_i2 = 1;
+  int idx_i3 = 0;
+
   std::array<double, 3> I_e = {0, 0, 0};
   franka_hw::TriggerRate rate_trigger_{1000.0};
   realtime_tools::RealtimePublisher<PRIMITIVEmessages> PRIMITIVE_publisher_;
@@ -88,12 +90,11 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   std::array<double, 7> q_start{
       {-0.00155713, -0.7739, -0.00012461, -2.38384, -0.00188551, 1.56271, 0.806219}};
   Eigen::Matrix<double, 7, 1> dq_command = {0, 0, 0, 0, 0, 0, 0};
-  //  std::array<double, 3> r_star_0 = {0.307926, -0.000730912, 0.573038};
-  //  std::array<double, 3> r_star_0 = {0.299695, 0.000269037, 0.463173};
-  std::array<double, 3> r_star_0 = {0.30587, -0.00013972, 0.46695};
+//  std::array<double, 3> r_star_0 = {0.30587, -0.00013972, 0.46695};
+  std::array<double, 3> r_star_0 = {0.5145, -0.2698,  0.1541};
 
-  //  std::array<double, 3> r_star_tf = {0.465203, -0.237464, 0.168568};
-  std::array<double, 3> r_star_tf = {+0.6250, -0.5250, +0.0250};
+//  std::array<double, 3> r_star_tf = {+0.6250, -0.5250, +0.0250};
+  std::array<double, 3> r_star_tf = {0.5145, 0.16734781111,  0.1541};
   double v_star_2[3];
   std::array<double, 3> r_star_2 = r_star_0;
   std::array<double, 3> e_t = {0, 0, 0};

@@ -263,9 +263,6 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
         std::cout << "+p_obj_ca=" << p_obj_ca << "\n";
         std::cout << "+p_obj_o=" << p_obj_o << "\n";
       }
-      if (true) {
-        std::cout << "+p_obj_o[mm]=" << p_obj_o*1000 << "\n";
-      }
     } catch (int N) {
       std::cout << "-CANNOT hear T_ftc_ca-" << "\n";
     }
@@ -406,7 +403,12 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     accum += e_EE_target[i] * e_EE_target[i];
   }
   double norm_e_EE_t = sqrt(accum);
+//  TODO
   if (norm_e_EE_t < 0.001 && idx_i2 > 1000) {
+    idx_i3+=10; //allows to wait a bit more raching the target
+  }
+//  TODO
+  if (norm_e_EE_t < 0.001 && idx_i3 > 10) {
     std::cout << "STOPPING!!!!!!!!!!!!!!!!" << " \n";
     std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
     std::cout << "*******1-EEposition=\n";
@@ -417,11 +419,11 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     std::cout << "idx_i2=" << idx_i2 << " \n";
     PRIMITIVEVelocityController::stopRequest(ros::Time::now());
   }
-//  else {
-//    for (size_t i = 0; i < 7; ++i) {
-//      velocity_joint_handles_[i].setCommand(dq_command(i));
-//    }
-//  }
+  else {
+    for (size_t i = 0; i < 7; ++i) {
+      velocity_joint_handles_[i].setCommand(dq_command(i));
+    }
+  }
   idx_i2 += 1;
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
     for (size_t i = 0; i < 7; ++i) {
