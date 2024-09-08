@@ -199,30 +199,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   franka::RobotState robot_state = state_handle_->getRobotState();
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
   Eigen::Vector3d EEposition(transform.translation());
-  //  Eigen::Matrix3d rotation1(transform1.rotation());
-  //  std::cout << "EEposition_original=" << EEposition1 << std::endl;
-  //  std::cout << "rotation1=" << rotation1 << std::endl;
-  //  Eigen::Vector3d EEposition2 =
-  //      rotation1.transpose() * p_Ftoftc2_F - rotation1.transpose() * EEposition1;
-  //  std::cout << "EEposition2=" << EEposition2 << std::endl;
-  //  Eigen::Vector3d EEposition3 = rotation1.inverse() * (p_Ftoftc2_F - EEposition1);
-  //  std::cout << "EEposition3=" << EEposition3 << std::endl;
-  //  Eigen::Vector3d EEposition4 = rotation1 * p_Ftoftc2_F + EEposition1;
-  //  std::cout << "EEposition4=" << EEposition4 << std::endl;
-
-  //  franka::RobotState robot_state = state_handle_->getRobotState();
-  //  Eigen::Map<Eigen::Matrix<double, 4, 4>> T_o_F(robot_state.O_T_EE.data());
-  //  Eigen::Matrix4d T_F_o = T_o_F.inverse();
-  //  Eigen::Transform<double, 3, Eigen::Affine> transform(T_F_o);
-  //  Eigen::Vector3d EEposition = transform * p_Ftoftc2_F;
-  //  std::cout << "T_o_F=" << T_o_F << std::endl;
-  //  std::cout << "T_F_o=" << T_F_o << std::endl;
-  //    std::cout << "EEposition=" << EEposition << std::endl;
 
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
-
-  //  Eigen::Affine3d T_F_ftc2(Eigen::Matrix4d::Map(T_F_ftc2_raw));
 
   if (idx_i2 % (mp * 100) == 0) {
     try {
@@ -403,11 +382,11 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     accum += e_EE_target[i] * e_EE_target[i];
   }
   double norm_e_EE_t = sqrt(accum);
-//  TODO
+  //  TODO // allows to wait a bit more reaching the target
   if (norm_e_EE_t < 0.001 && idx_i2 > 1000) {
-    idx_i3+=10; //allows to wait a bit more raching the target
+    idx_i3 += 10;
   }
-//  TODO
+  //  TODO
   if (norm_e_EE_t < 0.001 && idx_i3 > 10) {
     std::cout << "STOPPING!!!!!!!!!!!!!!!!" << " \n";
     std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
@@ -418,8 +397,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
     std::cout << "idx_i2=" << idx_i2 << " \n";
     PRIMITIVEVelocityController::stopRequest(ros::Time::now());
-  }
-  else {
+  } else {
     for (size_t i = 0; i < 7; ++i) {
       velocity_joint_handles_[i].setCommand(dq_command(i));
     }
