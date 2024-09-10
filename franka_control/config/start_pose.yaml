@@ -1,8 +1,18 @@
+#joint_pose:
+#  $(arg arm_id)_joint1: 0
+#  $(arg arm_id)_joint2: -0.785398163397
+#  $(arg arm_id)_joint3: 0
+#  $(arg arm_id)_joint4: -2.35619449019
+#  $(arg arm_id)_joint5: 0
+#  $(arg arm_id)_joint6: 1.57079632679
+#  $(arg arm_id)_joint7: 0.785398163397
+
+#joint poses corrospond to r_star_tf_ftc2 = {0.514, -0.320,   0.101}; with tolerance 1 mm
 joint_pose:
-  $(arg arm_id)_joint1: 0
-  $(arg arm_id)_joint2: -0.785398163397
-  $(arg arm_id)_joint3: 0
-  $(arg arm_id)_joint4: -2.35619449019
-  $(arg arm_id)_joint5: 0
-  $(arg arm_id)_joint6: 1.57079632679
-  $(arg arm_id)_joint7: 0.785398163397
+  $(arg arm_id)_joint1: -0.265687
+  $(arg arm_id)_joint2: 0.502712
+  $(arg arm_id)_joint3: -0.257185
+  $(arg arm_id)_joint4: -1.999945
+  $(arg arm_id)_joint5: -0.145195
+  $(arg arm_id)_joint6: 2.466326
+  $(arg arm_id)_joint7: 0.802872
