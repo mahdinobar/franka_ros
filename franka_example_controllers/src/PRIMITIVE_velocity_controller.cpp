@@ -237,10 +237,16 @@ void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
   std::string y_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/y_star.csv";
   std::string z_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/z_star.csv";
   std::string t_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/t.csv";
-  x_star = CSVopen("/home/mahdi/Documents/kalman/myCode/logs/measurements/x_star.csv");
-  y_star = CSVopen(y_fileToOpen);
-  z_star = CSVopen(z_fileToOpen);
+  x_star = CSVopen("/home/mahdi/Documents/kalman/myCode/logs/measurements/x_star.csv")/1000;
+  y_star = CSVopen(y_fileToOpen)/1000;
+  z_star = CSVopen(z_fileToOpen)/1000;
   t_star = CSVopen(t_fileToOpen);
+  //  std::cout << "x_star=" << x_star <<"\n";
+  std::cout << "y_star(0)=" << y_star(0) <<"\n";
+  std::cout << "y_star(last)=" << y_star(Eigen::last) <<"\n";
+  //  std::cout << "y_star(1000)=" << y_star(1000) <<"\n";
+  //  std::cout << "z_star=" << z_star <<"\n";
+  //  std::cout << "t_star=" << t_star <<"\n";
 
   // l2-norm
   double accum = 0.;
@@ -325,14 +331,23 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //        1000;
 
     //    plot 34.1/(1+exp(-0.003*(x-2000))) in [0,4000]
-    double v_star_dir_length = 34.1 / (1 + std::exp(-0.003 * (idx_1 - 2000))) / 1000 - 34.1 / (1 + std::exp(-0.003 * (0 - 2000))) / 1000;
+    double v_star_dir_length = 34.1 / (1 + std::exp(-0.04 * (idx_1 - 250))) / 1000 -
+                               34.1 / (1 + std::exp(-0.04 * (0 - 250))) / 1000;
 
-    for (int i = 0; i < 3; ++i) {
-      v_star[i] = v_star_dir[i] / norm_v_star_dir * v_star_dir_length;
+    if (warm_up == true) {
+      for (int i = 0; i < 3; ++i) {
+        v_star[i] = v_star_dir[i] / norm_v_star_dir * v_star_dir_length;
+        r_star_2[i] = dti1 * v_star[i] + r_star_2[i];
+      }
+    } else if (warm_up == false) {
+      v_star[0] = 0;
+      v_star[1] = 0.0341;
+      v_star[2] = 0;
+      int k_KF = 0;
+      r_star_2[0] = x_star(k_KF);
+      r_star_2[1] = y_star(k_KF);
+      r_star_2[2] = z_star(k_KF);
     }
-    r_star_2[0] = dti1 * v_star[0] + r_star_2[0];
-    r_star_2[1] = dti1 * v_star[1] + r_star_2[1];
-    r_star_2[2] = dti1 * v_star[2] + r_star_2[2];
     std::array<double, 42> jacobian_array =
         model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
     Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
@@ -457,8 +472,50 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //  }
   //  //  TODO
   //  if (norm_e_EE_t < 0.001 && idx_i3 > 10) {
-  if (norm_e_EE_t < 0.001) {
-    std::cout << "STOPPING!!!!!!!!!!!!!!!!" << " \n";
+  if (norm_e_EE_t < 0.001 and warm_up == true) {
+    if (false) {
+      std::cout << "=======================" << " \n";
+      std::cout << "v_star[0]=" << v_star[0] << " \n";
+      std::cout << "v_star[1]=" << v_star[1] << " \n";
+      std::cout << "v_star[2]=" << v_star[2] << " \n";
+      std::cout << "r_star_2[0]=" << r_star_2[0] << " \n";
+      std::cout << "r_star_2[1]=" << r_star_2[1] << " \n";
+      std::cout << "r_star_2[2]=" << r_star_2[2] << " \n";
+      std::cout << "r_star_tf[0]=" << r_star_tf[0] << " \n";
+      std::cout << "r_star_tf[1]=" << r_star_tf[1] << " \n";
+      std::cout << "r_star_tf[2]=" << r_star_tf[2] << " \n";
+      std::cout << "x_star(0)=" << x_star(0) << " \n";
+      std::cout << "y_star(0)=" << y_star(0) << " \n";
+      std::cout << "z_star(0)=" << z_star(0) << " \n";
+      std::cout << "x_star(Eigen::last)=" << x_star(Eigen::last) << " \n";
+      std::cout << "y_star(Eigen::last)=" << y_star(Eigen::last) << " \n";
+      std::cout << "z_star(Eigen::last)=" << z_star(Eigen::last) << " \n";
+      std::cout << "=======================" << " \n";
+    }
+    std::cout << "Warm up ended!!!!!!!!!!" << " \n";
+    std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
+    std::cout << "*******1-EEposition=\n";
+    for (int i = 0; i < 3; i++) {
+      std::cout << EEposition(i) << " ";
+      std::cout << std::endl;
+    }
+    std::cout << "idx_1ms=" << idx_1ms << " \n";
+    warm_up = false;
+    for (size_t i = 0; i < 7; ++i) {
+      if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
+        std::cout << "-------i=" << i << "\n";
+        std::cout << "-------NOOOOOOOOOOOO=" << dq_command(i) << "\n";
+        std::cout << "-------norm_e_EE_t=" << norm_e_EE_t << "\n";
+        if (std::signbit(dq_command(i))) {
+          dq_command(i) = -dq_max[i];
+        } else {
+          dq_command(i) = +dq_max[i];
+        }
+      }
+      velocity_joint_handles_[i].setCommand(dq_command(i));
+    }
+  } else if (norm_e_EE_t < 0.001 and warm_up == false) {
+    std::cout << "STOPPING!!!!!!!!!!" << " \n";
     std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
     std::cout << "*******1-EEposition=\n";
     for (int i = 0; i < 3; i++) {
@@ -469,15 +526,13 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     PRIMITIVEVelocityController::stopRequest(ros::Time::now());
   } else {
     for (size_t i = 0; i < 7; ++i) {
-      if (std::abs(dq_command(i)/1000) > dq_max[i]) {
+      if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         std::cout << "-------i=" << i << "\n";
         std::cout << "-------NOOOOOOOOOOOO=" << dq_command(i) << "\n";
         std::cout << "-------norm_e_EE_t=" << norm_e_EE_t << "\n";
-        if (std::signbit(dq_command(i)))
-        {
+        if (std::signbit(dq_command(i))) {
           dq_command(i) = -dq_max[i];
-        }else
-        {
+        } else {
           dq_command(i) = +dq_max[i];
         }
       }
