@@ -520,13 +520,16 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       velocity_joint_handles_[i].setCommand(dq_command(i));
     }
   } else if (norm_e_EE_t < 0.001 and warm_up == false) {
-    std::cout << "STOPPING!!!!!!!!!!" << " \n";
+    std::cout << "STOPPING!!!!!!!!!!!!!!!" << " \n";
     std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
     std::cout << "*******1-EEposition=\n";
     for (int i = 0; i < 3; i++) {
       std::cout << EEposition(i) << " ";
       std::cout << std::endl;
     }
+    std::cout << "x_star(Eigen::last)=" << x_star(Eigen::last) << " \n";
+    std::cout << "y_star(Eigen::last)=" << y_star(Eigen::last) << " \n";
+    std::cout << "z_star(Eigen::last)=" << z_star(Eigen::last) << " \n";
     std::cout << "idx_1ms=" << idx_1ms << " \n";
     PRIMITIVEVelocityController::stopRequest(ros::Time::now());
   } else {
