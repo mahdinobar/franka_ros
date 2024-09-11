@@ -343,10 +343,10 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       v_star[0] = 0;
       v_star[1] = 0.0341;
       v_star[2] = 0;
-      int k_KF = 0;
       r_star_2[0] = x_star(k_KF);
       r_star_2[1] = y_star(k_KF);
       r_star_2[2] = z_star(k_KF);
+      k_KF += 1;
     }
     std::array<double, 42> jacobian_array =
         model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
@@ -501,6 +501,11 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
     std::cout << "idx_1ms=" << idx_1ms << " \n";
     warm_up = false;
+    k_KF = 0;
+    r_star_tf[0]=x_star(Eigen::last);
+    r_star_tf[1]=y_star(Eigen::last);
+    r_star_tf[2]=z_star(Eigen::last);
+
     for (size_t i = 0; i < 7; ++i) {
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         std::cout << "-------i=" << i << "\n";

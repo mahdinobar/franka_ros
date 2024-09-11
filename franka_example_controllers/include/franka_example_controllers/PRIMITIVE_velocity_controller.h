@@ -136,6 +136,6 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::MatrixXd t_star;
   double norm_v_star_dir;
   bool warm_up = true;
-
+  int k_KF;
 };
 }  // namespace franka_example_controllers
