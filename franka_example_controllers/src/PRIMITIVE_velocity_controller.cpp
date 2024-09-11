@@ -233,11 +233,11 @@ void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
   //      v_star[row][column] = number_v;
   //    }
   //  }
-  std::string x_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/x_star.csv";
-  std::string y_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/y_star.csv";
-  std::string z_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/z_star.csv";
-  std::string t_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/t.csv";
-  x_star = CSVopen("/home/mahdi/Documents/kalman/myCode/logs/measurements/x_star.csv")/1000;
+  std::string x_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/x_star_model_1.csv";
+  std::string y_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/y_star_model_1.csv";
+  std::string z_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/z_star_model_1.csv";
+  std::string t_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/t_model_1.csv";
+  x_star = CSVopen(x_fileToOpen)/1000;
   y_star = CSVopen(y_fileToOpen)/1000;
   z_star = CSVopen(z_fileToOpen)/1000;
   t_star = CSVopen(t_fileToOpen);
