@@ -22,6 +22,7 @@
 #include <iostream>
 #include <string>
 #include "geometry_msgs/Vector3.h"
+#include "geometry_msgs/Vector3Stamped.h"
 #include "std_msgs/Float64MultiArray.h"
 
 // #include "KalmanFilter.cpp"
@@ -78,17 +79,17 @@ Eigen::MatrixXd CSVopen(std::string fileToOpen) {
 
 void CameraChatterCallback(geometry_msgs::Vector3 msg) {
   ROS_INFO("I heard??????????");
-  std::cout << "+++++++++++++++++++++I heard p_star_w_measured+++++++++++++++++++++" << "\n";
+  std::cout << "+++++++++++++++++++++I heard p_hat_w+++++++++++++++++++++" << "\n";
   std::cout << "msg=" << msg << "\n";
 }
 
 PRIMITIVEVelocityController::PRIMITIVEVelocityController()
     : command_struct_(), command_struct_2_() {}
 
-void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3& data) {
-  command_struct_.x = data.x;
-  command_struct_.y = data.y;
-  command_struct_.z = data.z;
+void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Stamped& data) {
+  command_struct_.x = data.vector.x;
+  command_struct_.y = data.vector.y;
+  command_struct_.z = data.vector.z;
   //  TODO correct time stamp must be immediately after capturing data?e.g.,timestamp of the depth
   //  map?
   command_struct_.stamp = ros::Time::now();
@@ -97,9 +98,9 @@ void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3& d
   received_measurement = true;
 
   cout << "camera measurement received!" << endl;
-  cout << "data.x" << data.x << endl;
-  cout << "data.y" << data.y << endl;
-  cout << "data.z" << data.z << endl;
+  cout << "data.x" << data.vector.x << endl;
+  cout << "data.y" << data.vector.y << endl;
+  cout << "data.z" << data.vector.z << endl;
   double t_measurement = command_struct_.stamp.toSec();
   //      cout << "t_measurement=" << t_measurement << endl;
   //      cout << "t_0=" << t_0 << endl;
@@ -174,7 +175,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1e6, false);
   STEPPERMOTOR_publisher_.init(node_handle, "STEPPERMOTOR_messages", 1e6, false);
 
-  sub_command_ = node_handle.subscribe("/p_star_w_measured", 100,
+  sub_command_ = node_handle.subscribe("/p_hat_w", 100,
                                        &PRIMITIVEVelocityController::cmdVelCallback, this);
   sub_command_2_ =
       node_handle.subscribe("/T_ftc_ca", 100, &PRIMITIVEVelocityController::cmdVelCallback2, this);
@@ -303,15 +304,15 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   if (k % (mp * 100) == 0) {
     try {
       Commands curr_cmd = *(command_.readFromRT());
-      p_star_w_measured(0) = curr_cmd.x;
-      p_star_w_measured(1) = curr_cmd.y;
-      p_star_w_measured(2) = curr_cmd.z;
+      p_hat_w(0) = curr_cmd.x;
+      p_hat_w(1) = curr_cmd.y;
+      p_hat_w(2) = curr_cmd.z;
       // TODO
       double t_measurement = curr_cmd.stamp.toSec();
       dt = t_measurement - t_0;
       t_0 = t_measurement;
     } catch (int N) {
-      std::cout << "CANNOT hear p_star_w_measured!" << "\n";
+      std::cout << "CANNOT hear p_hat_w!" << "\n";
     }
   }
 
@@ -325,7 +326,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     Sk = Sk.inverse();
     gainMatrices = covarianceApriori * (C.transpose()) * Sk;
     estimatesAposteriori =
-        estimatesApriori + gainMatrices * (p_star_w_measured - C * estimatesApriori);
+        estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
     Eigen::MatrixXd In;
     In = Eigen::MatrixXd::Identity(3, 3);
     Eigen::MatrixXd IminusKC;
@@ -338,7 +339,6 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   } else if (received_measurement == false) {
     B(1) = 1;  //[ms]
     X_prediction_ahead = A * X_prediction_ahead + B * u;
-//    cout << "X_prediction_ahead=" << X_prediction_ahead << endl;
   }
 
   //  UNCOMMENT for ROS camera camera (non) real-time communications
@@ -346,11 +346,11 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //    try {
   //      Commands curr_cmd = *(command_.readFromRT());
   //      //      std::cout << "+curr_cmd.x=" << curr_cmd.x << "\n";
-  //      p_star_w_measured(0) = curr_cmd.x;
-  //      p_star_w_measured(1) = curr_cmd.y;
-  //      p_star_w_measured(2) = curr_cmd.z;
+  //      p_hat_w(0) = curr_cmd.x;
+  //      p_hat_w(1) = curr_cmd.y;
+  //      p_hat_w(2) = curr_cmd.z;
   //    } catch (int N) {
-  //      std::cout << "CANNOT hear p_star_w_measured!" << "\n";
+  //      std::cout << "CANNOT hear p_hat_w!" << "\n";
   //    }
   //    try {
   //      Commands2 curr_cmd2 = *(command_2_.readFromRT());
@@ -369,7 +369,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //      Eigen::Vector3d t(transform_T_ca_o.translation());
   //      //      Eigen::Matrix3d R(transform_T_ca_o.rotation());
   //      Eigen::Matrix3d R = T_o_ca({0, 1, 2}, {0, 1, 2});
-  //      p_obj_o = R * p_star_w_measured + t + drift;
+  //      p_obj_o = R * p_hat_w + t + drift;
   //      if (debug) {
   //        std::cout << "+T_o_ftc=" << T_o_ftc << "\n";
   //        //            std::cout << "+T_o_ftc.inverse()=" << T_o_ftc.inverse() << "\n";
@@ -378,7 +378,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //        std::cout << "+T_o_ca=" << T_o_ca << "\n";
   //        std::cout << "+R=" << R << "\n";
   //        std::cout << "+t=" << t << "\n";
-  //        std::cout << "+p_star_w_measured=" << p_star_w_measured << "\n";
+  //        std::cout << "+p_hat_w=" << p_hat_w << "\n";
   //        std::cout << "+p_obj_o=" << p_obj_o << "\n";
   //      }
   //    } catch (int N) {
@@ -410,10 +410,15 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       v_star[0] = 0;
       v_star[1] = 0.0341;
       v_star[2] = 0;
-      r_star_2[0] = x_star(k_KF);
-      r_star_2[1] = y_star(k_KF);
-      r_star_2[2] = z_star(k_KF);
-      k_KF += 1;
+//      offline just demo KF
+//      r_star_2[0] = x_star(k_KF);
+//      r_star_2[1] = y_star(k_KF);
+//      r_star_2[2] = z_star(k_KF);
+//      k_KF += 1;
+    //      online KF
+      r_star_2[0] = X_prediction_ahead(0);
+      r_star_2[1] = X_prediction_ahead(1);
+      r_star_2[2] = X_prediction_ahead(2);
     }
     std::array<double, 42> jacobian_array =
         model_handle_->getZeroJacobian(franka::Frame::kEndEffector);

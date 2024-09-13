@@ -21,6 +21,7 @@
 #include <fstream>
 #include <iostream>
 #include "geometry_msgs/Vector3.h"
+#include "geometry_msgs/Vector3Stamped.h"
 #include "std_msgs/Float64MultiArray.h"
 
 #include "franka_example_controllers/KalmanFilter.h"
@@ -128,14 +129,14 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
                                        {0, 1, 0, 0},
                                        {0, 0, 1, 0},
                                        {0, 0, 0, 1}};
-  void cmdVelCallback(const geometry_msgs::Vector3& data);
+  void cmdVelCallback(const geometry_msgs::Vector3Stamped& data);
   void cmdVelCallback2(const std_msgs::Float64MultiArray& command);
 //  Eigen::Matrix<double, 4, 4> T_ftc_ca;
 //  Eigen::Vector<double, 3> p_obj_o = {0, 0, 0};
 //  Eigen::Vector<double, 3> drift = {0.057, 0.016, 0.018};
   Eigen::Vector<double, 3> drift = {0,0,0};
 //  Eigen::Vector<double, 3> p_obj_ca = {0, 0, 0};
-  Eigen::Vector<double, 3> p_star_w_measured {0, 0, 0};
+  Eigen::Vector<double, 3> p_hat_w {0, 0, 0};
   //  Eigen::Vector<double, 3> p_Ftoftc2_F = {0, 0, +0.1124};
   //  Eigen::Vector<double, 3> p_ftc2_o = {0, 0, 0};
   Eigen::MatrixXd x_star;
