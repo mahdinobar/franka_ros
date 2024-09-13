@@ -302,51 +302,27 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   if (k % (mp * 100) == 0) {
     try {
       Commands curr_cmd = *(command_.readFromRT());
-      //      std::cout << "+curr_cmd.x=" << curr_cmd.x << "\n";
       p_star_w_measured(0) = curr_cmd.x;
       p_star_w_measured(1) = curr_cmd.y;
       p_star_w_measured(2) = curr_cmd.z;
-      //      TODO
+      // TODO
       double t_measurement = curr_cmd.stamp.toSec();
-      //      cout << "t_measurement=" << t_measurement << endl;
-      //      cout << "t_0=" << t_0 << endl;
       dt = t_measurement - t_0;
-      //      cout << "dt=" << dt << endl;
       t_0 = t_measurement;
     } catch (int N) {
       std::cout << "CANNOT hear p_star_w_measured!" << "\n";
     }
   }
 
-  //  TODO implement KF much more efficient within update
-//  KalmanFilter KalmanFilterObject(A, B, C, Q, R, P0, x0, maxDataSamples_KF);
-//  KalmanFilterObject.X_prediction_ahead.col(0) = KalmanFilterObject.X_prediction_ahead.col(1);
-
+  //  TODO can you implement KF  more efficiently?
   if (received_measurement == true) {
-    //    KalmanFilterObject.B(1) = dt;  //[ms]
     B(1) = dt;  //[ms]
-                //    KalmanFilterObject.predictEstimate(u);
     estimatesApriori = A * estimatesAposteriori + B * u;
     covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
-
-    // update the estimate
-    //    KalmanFilterObject.updateEstimate(p_star_w_measured(0), p_star_w_measured(1),
-    //                                      p_star_w_measured(2));
     Eigen::Matrix<double, 3, 3>Sk;
     Sk = R + C * covarianceApriori;
     Sk = Sk.inverse();
-    // gain matrices
     gainMatrices = covarianceApriori * (C.transpose()) * Sk;
-    // compute the error - innovation
-    //    cout << -C * estimatesApriori.col(k_measured - 1) << endl;
-    //    Eigen::Matrix<double, 3, 1> Y;
-    //    Y(0) = measurement_x;
-    //    Y(1) = measurement_y;
-    //    Y(2) = measurement_z;
-    //    cout << Y << endl;
-    //    errors.col(0) = p_star_w_measured - C * estimatesApriori;
-    // compute the a posteriori estimate, remember that for k_measured=0, the corresponding column
-    // is x0 - initial guess
     estimatesAposteriori =
         estimatesApriori + gainMatrices * (p_star_w_measured - C * estimatesApriori);
     Eigen::MatrixXd In;
@@ -354,25 +330,14 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     Eigen::MatrixXd IminusKC;
     IminusKC.resize(3, 3);
     IminusKC = In - gainMatrices * C;  // I-KC
-    // update the a posteriori covariance matrix
     covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
                             gainMatrices * R * (gainMatrices.transpose());
     X_prediction_ahead=estimatesAposteriori;
     received_measurement = false;
   } else if (received_measurement == false) {
-    //    try {
-    //      cout << "KalmanFilterObject.B(1)=" << KalmanFilterObject.B(1) << endl;
     B(1) = 1;  //[ms]
-               //      KalmanFilterObject.prediction_aheads(u);
     X_prediction_ahead = A * X_prediction_ahead + B * u;
     cout << "X_prediction_ahead=" << X_prediction_ahead << endl;
-    //      cout << "KalmanFilterObject.X_prediction_ahead.col(0)=" <<
-    //      KalmanFilterObject.X_prediction_ahead.col(0) << endl; cout <<
-    //      "KalmanFilterObject.X_prediction_ahead.col(1)=" <<
-    //      KalmanFilterObject.X_prediction_ahead.col(1) << endl;
-    //    } catch (const std::exception& e) {
-    //      std::cout << "Caught " << e.what() << std::endl;
-    //    }
   }
 
   //  UNCOMMENT for ROS camera camera (non) real-time communications
