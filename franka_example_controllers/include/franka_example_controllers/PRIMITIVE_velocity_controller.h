@@ -23,6 +23,10 @@
 #include "geometry_msgs/Vector3.h"
 #include "std_msgs/Float64MultiArray.h"
 
+#include "franka_example_controllers/KalmanFilter.h"
+#include "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/src/KalmanFilter.cpp"
+
+
 namespace franka_example_controllers {
 
 class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceController<
@@ -42,19 +46,21 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
 
   void stopRequest(const ros::Time& time);
 
+
  private:
   hardware_interface::VelocityJointInterface* velocity_joint_interface_;
   std::vector<hardware_interface::JointHandle> velocity_joint_handles_;
   std::unique_ptr<franka_hw::FrankaModelHandle> model_handle_;
   ros::Duration elapsed_time_;
-  ros::Time t_init;
+  double t_0;
   std::array<double, 7> initial_pose_{};
   std::array<double, 7> joints_pose_{};
   std::array<double, 7> joints_vel_{};
   std::array<double, 16> initial_O_T_EE_{};
   std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_;  // seems to be franka_states
   int idx_1 = 0;
-  int idx_1ms = 1;
+//  TODO check
+  int k = 0;
   int idx_i3 = 0;
 
   std::array<double, 3> I_e = {0, 0, 0};
@@ -123,11 +129,12 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
                                        {0, 0, 0, 1}};
   void cmdVelCallback(const geometry_msgs::Vector3& data);
   void cmdVelCallback2(const std_msgs::Float64MultiArray& command);
-  Eigen::Matrix<double, 4, 4> T_ftc_ca;
-  Eigen::Vector<double, 3> p_obj_o = {0, 0, 0};
+//  Eigen::Matrix<double, 4, 4> T_ftc_ca;
+//  Eigen::Vector<double, 3> p_obj_o = {0, 0, 0};
 //  Eigen::Vector<double, 3> drift = {0.057, 0.016, 0.018};
   Eigen::Vector<double, 3> drift = {0,0,0};
-  Eigen::Vector<double, 3> p_obj_ca = {0, 0, 0};
+//  Eigen::Vector<double, 3> p_obj_ca = {0, 0, 0};
+  Eigen::Vector<double, 3> p_star_w_measured {0, 0, 0};
   //  Eigen::Vector<double, 3> p_Ftoftc2_F = {0, 0, +0.1124};
   //  Eigen::Vector<double, 3> p_ftc2_o = {0, 0, 0};
   Eigen::MatrixXd x_star;
@@ -137,5 +144,51 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   double norm_v_star_dir;
   bool warm_up = true;
   int k_KF;
+
+  // TODO bring into starting?
+  Eigen::Matrix<double, 3, 3> A{{1, 0, 0},
+                                {0, 1, 0},
+                                {0, 0, 1}};
+  Eigen::Matrix<double, 3, 1> B{{0},
+                                {1},
+                                {0}};
+  Eigen::Matrix<double, 3, 3> C{{1, 0, 0},
+                                {0, 1, 0},
+                                {0, 0, 1}};
+  // covariance matrix of the state estimation error P0- abbreviated as "state covariance matrix"
+  Eigen::Matrix<double, 3, 3> P0{{1, 0, 0},
+                                 {0, 4, 0},
+                                 {0, 0, 1}};
+
+  // covariance matrix of the measurement noise
+  Eigen::Matrix<double, 3, 3> R{{4, 0, 0},
+                                {0, 25, 0},
+                                {0, 0, 4}};
+  // covariance matrix of the state disturbance
+  Eigen::Matrix<double, 3, 3> Q{{1, 0, 0},
+                                {0, 4, 0},
+                                {0, 0, 1}};
+  // guess of the initial state estimate
+  Eigen::Matrix<double, 3, 1> x0{{514},
+                                 {-270},
+                                 {101}};
+  Eigen::Matrix<double, 1, 1> u{{0.0341}};
+  //  TODO
+  unsigned int maxDataSamples_KF = 2;
+  double u_KF = 0.0341;
+  bool received_measurement=false;
+  double dt;
+
+
+  Eigen::Matrix<double, 3, 1> X_prediction_ahead =x0;
+  Eigen::Matrix<double, 3, 1> estimatesAposteriori =x0;
+  Eigen::Matrix<double, 3, 1> estimatesApriori;
+  Eigen::Matrix<double, 3, 3> covarianceAposteriori =P0;
+  Eigen::Matrix<double, 3, 3> covarianceApriori;
+  Eigen::Matrix<double, 3, 3> gainMatrices;
+
+
+
+
 };
 }  // namespace franka_example_controllers

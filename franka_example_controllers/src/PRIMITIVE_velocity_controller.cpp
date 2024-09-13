@@ -24,6 +24,9 @@
 #include "geometry_msgs/Vector3.h"
 #include "std_msgs/Float64MultiArray.h"
 
+// #include "KalmanFilter.cpp"
+// #include "franka_example_controllers/KalmanFilter.h"
+
 namespace franka_example_controllers {
 Eigen::MatrixXd CSVopen(std::string fileToOpen) {
   // the inspiration for creating this function was drawn from here (I did NOT copy and paste the
@@ -75,7 +78,7 @@ Eigen::MatrixXd CSVopen(std::string fileToOpen) {
 
 void CameraChatterCallback(geometry_msgs::Vector3 msg) {
   ROS_INFO("I heard??????????");
-  std::cout << "+++++++++++++++++++++I heard p_obj_ca+++++++++++++++++++++" << "\n";
+  std::cout << "+++++++++++++++++++++I heard p_star_w_measured+++++++++++++++++++++" << "\n";
   std::cout << "msg=" << msg << "\n";
 }
 
@@ -86,8 +89,23 @@ void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3& d
   command_struct_.x = data.x;
   command_struct_.y = data.y;
   command_struct_.z = data.z;
+  //  TODO correct time stamp must be immediately after capturing data?e.g.,timestamp of the depth
+  //  map?
   command_struct_.stamp = ros::Time::now();
   command_.writeFromNonRT(command_struct_);
+
+  received_measurement = true;
+
+  cout << "camera measurement received!" << endl;
+  cout << "data.x" << data.x << endl;
+  cout << "data.y" << data.y << endl;
+  cout << "data.z" << data.z << endl;
+  double t_measurement = command_struct_.stamp.toSec();
+  //      cout << "t_measurement=" << t_measurement << endl;
+  //      cout << "t_0=" << t_0 << endl;
+  dt = t_measurement - t_0;
+  //      cout << "dt=" << dt << endl;
+  t_0 = t_measurement;
 }
 void PRIMITIVEVelocityController::cmdVelCallback2(const std_msgs::Float64MultiArray& command) {
   command_struct_2_.data = command.data;
@@ -155,8 +173,8 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   }
   PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1e6, false);
 
-  sub_command_ =
-      node_handle.subscribe("/p_obj_ca", 100, &PRIMITIVEVelocityController::cmdVelCallback, this);
+  sub_command_ = node_handle.subscribe("/p_star_w_measured", 100,
+                                       &PRIMITIVEVelocityController::cmdVelCallback, this);
   sub_command_2_ =
       node_handle.subscribe("/T_ftc_ca", 100, &PRIMITIVEVelocityController::cmdVelCallback2, this);
   ros::spinOnce();
@@ -174,38 +192,40 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   //  std::cout << "T_F_o=" << T_F_o << std::endl;
   //  std::cout << "p_Ftoftc2_F=" << p_Ftoftc2_F << std::endl;
   //  std::cout << "p_ftc2_o=" << p_ftc2_o << std::endl;
+  // define model: A,B,C matrices
 
   return true;
 }
 
 void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
-  for (size_t i = 0; i < 7; ++i) {
-    initial_pose_[i] = velocity_joint_handles_[i].getPosition();
-  }
-  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/RLCFEP/code/logs/q_log_b_interp.txt");
-  if (!inputfile_q_star.is_open()) {
-    std::cout << "Error reading q_log_interp file" << std::endl;
-  }
-  for (int row = 0; row < Target_Traj_ROWS; ++row) {
-    std::string row_text_q;
-    std::getline(inputfile_q_star, row_text_q);
-    std::istringstream row_stream_q(row_text_q);
-    for (int column = 0; column < 9; ++column) {
-      double number_q;
-      char delimiter;
-      row_stream_q >> number_q >> delimiter;
-      q_star[row][column] = number_q;
-    }
-  }
-  initial_O_T_EE_ = model_handle_->getPose(franka::Frame::kEndEffector);
-  //  elapsed_time_ = ros::Duration();
-  t_init = ros::Time::now();
-  std::cout << "ROS system clock t_init=" << t_init << " \n";
-  std::cout << std::endl;
+  t_0 = ros::Time::now().toSec();
+  ros::Time t_check = ros::Time::now();
+  cout << "t_0=" << t_0 << endl;
+  cout << "t_check=" << t_check << endl;
   std::cout << "ros::Time::isSimTime()=" << ros::Time::isSimTime() << " \n";
   std::cout << std::endl;
   std::cout << "ros::Time::isSystemTime()=" << ros::Time::isSystemTime() << " \n";
   std::cout << std::endl;
+  for (size_t i = 0; i < 7; ++i) {
+    initial_pose_[i] = velocity_joint_handles_[i].getPosition();
+  }
+  //  std::ifstream inputfile_q_star("/home/mahdi/ETHZ/codes/RLCFEP/code/logs/q_log_b_interp.txt");
+  //  if (!inputfile_q_star.is_open()) {
+  //    std::cout << "Error reading q_log_interp file" << std::endl;
+  //  }
+  //  for (int row = 0; row < Target_Traj_ROWS; ++row) {
+  //    std::string row_text_q;
+  //    std::getline(inputfile_q_star, row_text_q);
+  //    std::istringstream row_stream_q(row_text_q);
+  //    for (int column = 0; column < 9; ++column) {
+  //      double number_q;
+  //      char delimiter;
+  //      row_stream_q >> number_q >> delimiter;
+  //      q_star[row][column] = number_q;
+  //    }
+  //  }
+  initial_O_T_EE_ = model_handle_->getPose(franka::Frame::kEndEffector);
+  //  elapsed_time_ = ros::Duration();
   //  std::ifstream inputfile_r_star(
   //      "/home/mahdi/ETHZ/codes/RLCFEP/code/logs/currentPosition_log_b.txt");
   //  if (!inputfile_r_star.is_open()) {
@@ -233,17 +253,20 @@ void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
   //      v_star[row][column] = number_v;
   //    }
   //  }
-  std::string x_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/x_star_model_1.csv";
-  std::string y_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/y_star_model_1.csv";
-  std::string z_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/z_star_model_1.csv";
+  std::string x_fileToOpen =
+      "/home/mahdi/Documents/kalman/myCode/logs/measurements/x_star_model_1.csv";
+  std::string y_fileToOpen =
+      "/home/mahdi/Documents/kalman/myCode/logs/measurements/y_star_model_1.csv";
+  std::string z_fileToOpen =
+      "/home/mahdi/Documents/kalman/myCode/logs/measurements/z_star_model_1.csv";
   std::string t_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/t_model_1.csv";
-  x_star = CSVopen(x_fileToOpen)/1000;
-  y_star = CSVopen(y_fileToOpen)/1000;
-  z_star = CSVopen(z_fileToOpen)/1000;
+  x_star = CSVopen(x_fileToOpen) / 1000;
+  y_star = CSVopen(y_fileToOpen) / 1000;
+  z_star = CSVopen(z_fileToOpen) / 1000;
   t_star = CSVopen(t_fileToOpen);
   //  std::cout << "x_star=" << x_star <<"\n";
-  std::cout << "y_star(0)=" << y_star(0) <<"\n";
-  std::cout << "y_star(last)=" << y_star(Eigen::last) <<"\n";
+  //  std::cout << "y_star(0)=" << y_star(0) << "\n";
+  //  std::cout << "y_star(last)=" << y_star(Eigen::last) << "\n";
   //  std::cout << "y_star(1000)=" << y_star(1000) <<"\n";
   //  std::cout << "z_star=" << z_star <<"\n";
   //  std::cout << "t_star=" << t_star <<"\n";
@@ -260,7 +283,7 @@ void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
 void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Duration& period) {
   //  TODO improve how smoothen initially by mp
   int mp = 1;
-  if (idx_1ms > 100) {
+  if (k > 100) {
     mp = 1;
   }
   double dti1 = 0.001 * mp;
@@ -274,16 +297,94 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
 
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
+
+  //  TODO Attention on subscription rate
+  if (k % (mp * 100) == 0) {
+    try {
+      Commands curr_cmd = *(command_.readFromRT());
+      //      std::cout << "+curr_cmd.x=" << curr_cmd.x << "\n";
+      p_star_w_measured(0) = curr_cmd.x;
+      p_star_w_measured(1) = curr_cmd.y;
+      p_star_w_measured(2) = curr_cmd.z;
+      //      TODO
+      double t_measurement = curr_cmd.stamp.toSec();
+      //      cout << "t_measurement=" << t_measurement << endl;
+      //      cout << "t_0=" << t_0 << endl;
+      dt = t_measurement - t_0;
+      //      cout << "dt=" << dt << endl;
+      t_0 = t_measurement;
+    } catch (int N) {
+      std::cout << "CANNOT hear p_star_w_measured!" << "\n";
+    }
+  }
+
+  //  TODO implement KF much more efficient within update
+//  KalmanFilter KalmanFilterObject(A, B, C, Q, R, P0, x0, maxDataSamples_KF);
+//  KalmanFilterObject.X_prediction_ahead.col(0) = KalmanFilterObject.X_prediction_ahead.col(1);
+
+  if (received_measurement == true) {
+    //    KalmanFilterObject.B(1) = dt;  //[ms]
+    B(1) = dt;  //[ms]
+                //    KalmanFilterObject.predictEstimate(u);
+    estimatesApriori = A * estimatesAposteriori + B * u;
+    covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
+
+    // update the estimate
+    //    KalmanFilterObject.updateEstimate(p_star_w_measured(0), p_star_w_measured(1),
+    //                                      p_star_w_measured(2));
+    Eigen::Matrix<double, 3, 3>Sk;
+    Sk = R + C * covarianceApriori;
+    Sk = Sk.inverse();
+    // gain matrices
+    gainMatrices = covarianceApriori * (C.transpose()) * Sk;
+    // compute the error - innovation
+    //    cout << -C * estimatesApriori.col(k_measured - 1) << endl;
+    //    Eigen::Matrix<double, 3, 1> Y;
+    //    Y(0) = measurement_x;
+    //    Y(1) = measurement_y;
+    //    Y(2) = measurement_z;
+    //    cout << Y << endl;
+    //    errors.col(0) = p_star_w_measured - C * estimatesApriori;
+    // compute the a posteriori estimate, remember that for k_measured=0, the corresponding column
+    // is x0 - initial guess
+    estimatesAposteriori =
+        estimatesApriori + gainMatrices * (p_star_w_measured - C * estimatesApriori);
+    Eigen::MatrixXd In;
+    In = Eigen::MatrixXd::Identity(3, 3);
+    Eigen::MatrixXd IminusKC;
+    IminusKC.resize(3, 3);
+    IminusKC = In - gainMatrices * C;  // I-KC
+    // update the a posteriori covariance matrix
+    covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
+                            gainMatrices * R * (gainMatrices.transpose());
+    X_prediction_ahead=estimatesAposteriori;
+    received_measurement = false;
+  } else if (received_measurement == false) {
+    //    try {
+    //      cout << "KalmanFilterObject.B(1)=" << KalmanFilterObject.B(1) << endl;
+    B(1) = 1;  //[ms]
+               //      KalmanFilterObject.prediction_aheads(u);
+    X_prediction_ahead = A * X_prediction_ahead + B * u;
+    cout << "X_prediction_ahead=" << X_prediction_ahead << endl;
+    //      cout << "KalmanFilterObject.X_prediction_ahead.col(0)=" <<
+    //      KalmanFilterObject.X_prediction_ahead.col(0) << endl; cout <<
+    //      "KalmanFilterObject.X_prediction_ahead.col(1)=" <<
+    //      KalmanFilterObject.X_prediction_ahead.col(1) << endl;
+    //    } catch (const std::exception& e) {
+    //      std::cout << "Caught " << e.what() << std::endl;
+    //    }
+  }
+
   //  UNCOMMENT for ROS camera camera (non) real-time communications
-  //  if (idx_1ms % (mp * 100) == 0) {
+  //  if (k % (mp * 100) == 0) {
   //    try {
   //      Commands curr_cmd = *(command_.readFromRT());
   //      //      std::cout << "+curr_cmd.x=" << curr_cmd.x << "\n";
-  //      p_obj_ca(0) = curr_cmd.x;
-  //      p_obj_ca(1) = curr_cmd.y;
-  //      p_obj_ca(2) = curr_cmd.z;
+  //      p_star_w_measured(0) = curr_cmd.x;
+  //      p_star_w_measured(1) = curr_cmd.y;
+  //      p_star_w_measured(2) = curr_cmd.z;
   //    } catch (int N) {
-  //      std::cout << "CANNOT hear p_obj_ca!" << "\n";
+  //      std::cout << "CANNOT hear p_star_w_measured!" << "\n";
   //    }
   //    try {
   //      Commands2 curr_cmd2 = *(command_2_.readFromRT());
@@ -302,7 +403,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //      Eigen::Vector3d t(transform_T_ca_o.translation());
   //      //      Eigen::Matrix3d R(transform_T_ca_o.rotation());
   //      Eigen::Matrix3d R = T_o_ca({0, 1, 2}, {0, 1, 2});
-  //      p_obj_o = R * p_obj_ca + t + drift;
+  //      p_obj_o = R * p_star_w_measured + t + drift;
   //      if (debug) {
   //        std::cout << "+T_o_ftc=" << T_o_ftc << "\n";
   //        //            std::cout << "+T_o_ftc.inverse()=" << T_o_ftc.inverse() << "\n";
@@ -311,14 +412,14 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //        std::cout << "+T_o_ca=" << T_o_ca << "\n";
   //        std::cout << "+R=" << R << "\n";
   //        std::cout << "+t=" << t << "\n";
-  //        std::cout << "+p_obj_ca=" << p_obj_ca << "\n";
+  //        std::cout << "+p_star_w_measured=" << p_star_w_measured << "\n";
   //        std::cout << "+p_obj_o=" << p_obj_o << "\n";
   //      }
   //    } catch (int N) {
   //      std::cout << "-CANNOT hear T_ftc_ca-" << "\n";
   //    }
   //  }
-  if (idx_1ms % mp == 0) {
+  if (k % mp == 0) {
     //    std::cout << "t_star[idx_1]=" << t_star(idx_1) << "\n";
     //    elapsed_time_ += period;
     //    double v_star_dir_length =
@@ -467,7 +568,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   }
   double norm_e_EE_t = sqrt(accum);
   //  //  TODO // allows to wait a bit more reaching the target
-  //  if (norm_e_EE_t < 0.001 && idx_1ms > 1000) {
+  //  if (norm_e_EE_t < 0.001 && k > 1000) {
   //    idx_i3 += 10;
   //  }
   //  //  TODO
@@ -499,12 +600,12 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       std::cout << EEposition(i) << " ";
       std::cout << std::endl;
     }
-    std::cout << "idx_1ms=" << idx_1ms << " \n";
+    std::cout << "k=" << k << " \n";
     warm_up = false;
     k_KF = 0;
-    r_star_tf[0]=x_star(Eigen::last);
-    r_star_tf[1]=y_star(Eigen::last);
-    r_star_tf[2]=z_star(Eigen::last);
+    r_star_tf[0] = x_star(Eigen::last);
+    r_star_tf[1] = y_star(Eigen::last);
+    r_star_tf[2] = z_star(Eigen::last);
 
     for (size_t i = 0; i < 7; ++i) {
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
@@ -530,7 +631,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     std::cout << "x_star(Eigen::last)=" << x_star(Eigen::last) << " \n";
     std::cout << "y_star(Eigen::last)=" << y_star(Eigen::last) << " \n";
     std::cout << "z_star(Eigen::last)=" << z_star(Eigen::last) << " \n";
-    std::cout << "idx_1ms=" << idx_1ms << " \n";
+    std::cout << "k=" << k << " \n";
     PRIMITIVEVelocityController::stopRequest(ros::Time::now());
   } else {
     for (size_t i = 0; i < 7; ++i) {
@@ -547,7 +648,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       velocity_joint_handles_[i].setCommand(dq_command(i));
     }
   }
-  idx_1ms += 1;
+  k += 1;
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
     for (size_t i = 0; i < 7; ++i) {
       // inner loop 1: ds_i1=1ms (1000 Hz)
