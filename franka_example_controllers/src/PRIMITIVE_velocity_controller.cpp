@@ -172,6 +172,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
     return false;
   }
   PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1e6, false);
+  STEPPERMOTOR_publisher_.init(node_handle, "STEPPERMOTOR_messages", 1e6, false);
 
   sub_command_ = node_handle.subscribe("/p_star_w_measured", 100,
                                        &PRIMITIVEVelocityController::cmdVelCallback, this);
@@ -337,7 +338,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   } else if (received_measurement == false) {
     B(1) = 1;  //[ms]
     X_prediction_ahead = A * X_prediction_ahead + B * u;
-    cout << "X_prediction_ahead=" << X_prediction_ahead << endl;
+//    cout << "X_prediction_ahead=" << X_prediction_ahead << endl;
   }
 
   //  UNCOMMENT for ROS camera camera (non) real-time communications
@@ -532,12 +533,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     accum += e_EE_target[i] * e_EE_target[i];
   }
   double norm_e_EE_t = sqrt(accum);
-  //  //  TODO // allows to wait a bit more reaching the target
-  //  if (norm_e_EE_t < 0.001 && k > 1000) {
-  //    idx_i3 += 10;
-  //  }
-  //  //  TODO
-  //  if (norm_e_EE_t < 0.001 && idx_i3 > 10) {
+
+  //  TODO check
   if (norm_e_EE_t < 0.001 and warm_up == true) {
     if (false) {
       std::cout << "=======================" << " \n";
@@ -567,6 +564,15 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
     std::cout << "k=" << k << " \n";
     warm_up = false;
+    //    TODO this is not necessarily is going to lock
+    //    publish message to switch on the conveyor belt
+    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
+      STEPPERMOTOR_publisher_.msg_.vector.x = 1;
+      STEPPERMOTOR_publisher_.msg_.vector.y = 2025;
+      STEPPERMOTOR_publisher_.msg_.header.stamp=ros::Time::now();
+      STEPPERMOTOR_publisher_.unlockAndPublish();
+    }
+    //    TODO
     k_KF = 0;
     r_star_tf[0] = x_star(Eigen::last);
     r_star_tf[1] = y_star(Eigen::last);
@@ -583,6 +589,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           dq_command(i) = +dq_max[i];
         }
       }
+      //      TODO do you need here to send command too?
       velocity_joint_handles_[i].setCommand(dq_command(i));
     }
   } else if (norm_e_EE_t < 0.001 and warm_up == false) {
@@ -599,6 +606,14 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     std::cout << "k=" << k << " \n";
     PRIMITIVEVelocityController::stopRequest(ros::Time::now());
   } else {
+    //    TODO this is not necessarily is going to lock so I put here continuously to try to send switch on command
+    //    publish message to switch on the conveyor belt
+    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
+      STEPPERMOTOR_publisher_.msg_.vector.x = 1;
+      STEPPERMOTOR_publisher_.msg_.vector.y = 2025;
+      STEPPERMOTOR_publisher_.msg_.header.stamp=ros::Time::now();
+      STEPPERMOTOR_publisher_.unlockAndPublish();
+    }
     for (size_t i = 0; i < 7; ++i) {
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         std::cout << "-------i=" << i << "\n";
@@ -610,6 +625,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           dq_command(i) = +dq_max[i];
         }
       }
+      //      send control command
       velocity_joint_handles_[i].setCommand(dq_command(i));
     }
   }

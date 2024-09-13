@@ -66,6 +66,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   std::array<double, 3> I_e = {0, 0, 0};
   franka_hw::TriggerRate rate_trigger_{1000.0};
   realtime_tools::RealtimePublisher<PRIMITIVEmessages> PRIMITIVE_publisher_;
+  realtime_tools::RealtimePublisher<geometry_msgs::Vector3Stamped> STEPPERMOTOR_publisher_;
   struct Commands {
     double x;
     double y;

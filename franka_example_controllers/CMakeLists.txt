@@ -43,7 +43,7 @@ add_message_files(FILES
         JointTorqueComparison.msg
         PRIMITIVEmessages.msg
 )
-generate_messages(DEPENDENCIES std_msgs)
+generate_messages(DEPENDENCIES std_msgs geometry_msgs)
 
 generate_dynamic_reconfigure_options(
         cfg/compliance_param.cfg

@@ -8,3 +8,4 @@ float64[21] J_translation_pinv
 float64[42] jacobian_array
 float64[7] q_c
 float64[7] dq_c
+geometry_msgs/Vector3Stamped stepper_motor_switch
