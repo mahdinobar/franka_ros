@@ -1,6 +1,13 @@
 // Copyright (c) 2017 Franka Emika GmbH
 // Use of this source code is governed by the Apache-2.0 license, see LICENSE
+#define MODEL_0 0  // or 0 if you want MODEL_0 to be false
+#define MODEL_1 1  // or 0 if you want MODEL_1 to be false
+#if MODEL_0
 #include <franka_example_controllers/PRIMITIVE_velocity_controller.h>
+#elif MODEL_1
+#include <franka_example_controllers/PRIMITIVE_velocity_controller_model_1.h>
+#endif
+
 
 #include <cmath>
 
@@ -89,7 +96,8 @@ PRIMITIVEVelocityController::PRIMITIVEVelocityController()
 void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Stamped& data) {
   command_struct_.x = data.vector.x;
   command_struct_.y = data.vector.y;
-  command_struct_.z = data.vector.z;
+  //  TODO pay attention
+  command_struct_.z = data.vector.z + 33;
   //  TODO correct time stamp must be immediately after capturing data?e.g.,timestamp of the depth
   //  map?
   command_struct_.stamp = ros::Time::now();
@@ -175,8 +183,8 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1e6, false);
   STEPPERMOTOR_publisher_.init(node_handle, "STEPPERMOTOR_messages", 1e6, false);
 
-  sub_command_ = node_handle.subscribe("/p_hat_w", 100,
-                                       &PRIMITIVEVelocityController::cmdVelCallback, this);
+  sub_command_ =
+      node_handle.subscribe("/p_hat_w", 100, &PRIMITIVEVelocityController::cmdVelCallback, this);
   sub_command_2_ =
       node_handle.subscribe("/T_ftc_ca", 100, &PRIMITIVEVelocityController::cmdVelCallback2, this);
   ros::spinOnce();
@@ -306,6 +314,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       Commands curr_cmd = *(command_.readFromRT());
       p_hat_w(0) = curr_cmd.x;
       p_hat_w(1) = curr_cmd.y;
+      //      TODO Pay attention
       p_hat_w(2) = curr_cmd.z;
       // TODO
       double t_measurement = curr_cmd.stamp.toSec();
@@ -318,27 +327,59 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
 
   //  TODO can you implement KF  more efficiently?
   if (received_measurement == true) {
-    B(1) = dt;  //[ms]
-    estimatesApriori = A * estimatesAposteriori + B * u;
-    covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
-    Eigen::Matrix<double, 3, 3>Sk;
-    Sk = R + C * covarianceApriori;
-    Sk = Sk.inverse();
-    gainMatrices = covarianceApriori * (C.transpose()) * Sk;
-    estimatesAposteriori =
-        estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
-    Eigen::MatrixXd In;
-    In = Eigen::MatrixXd::Identity(3, 3);
-    Eigen::MatrixXd IminusKC;
-    IminusKC.resize(3, 3);
-    IminusKC = In - gainMatrices * C;  // I-KC
-    covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
-                            gainMatrices * R * (gainMatrices.transpose());
-    X_prediction_ahead=estimatesAposteriori;
-    received_measurement = false;
+    if (MODEL_0) {
+      B(1) = dt;  //[ms]
+      estimatesApriori = A * estimatesAposteriori + B * u;
+      covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
+      Eigen::Matrix<double, 3, 3> Sk;
+      Sk = R + C * covarianceApriori * (C.transpose());
+      Sk = Sk.inverse();
+      gainMatrices = covarianceApriori * (C.transpose()) * Sk;
+      estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
+      Eigen::MatrixXd In;
+      In = Eigen::MatrixXd::Identity(3, 3);
+      Eigen::MatrixXd IminusKC;
+      IminusKC.resize(3, 3);
+      IminusKC = In - gainMatrices * C;  // I-KC
+      covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
+                              gainMatrices * R * (gainMatrices.transpose());
+      X_prediction_ahead = estimatesAposteriori;
+      received_measurement = false;
+      k_KF += 1;
+    }
+    else if (MODEL_1){
+      A(0,3) = dt;  //[ms]
+      A(1,4) = dt;  //[ms]
+      A(2,5) = dt;  //[ms]
+      estimatesApriori = A * estimatesAposteriori + B * u;
+      covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
+      Eigen::Matrix<double, 6,6> Sk;
+      Sk = R + C * covarianceApriori * (C.transpose());
+      Sk = Sk.inverse();
+      gainMatrices = covarianceApriori * (C.transpose()) * Sk;
+      estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
+      Eigen::MatrixXd In;
+      In = Eigen::MatrixXd::Identity(6, 6);
+      Eigen::MatrixXd IminusKC;
+      IminusKC.resize(6, 6);
+      IminusKC = In - gainMatrices * C;  // I-KC
+      covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
+                              gainMatrices * R * (gainMatrices.transpose());
+      X_prediction_ahead = estimatesAposteriori;
+      received_measurement = false;
+      k_KF += 1;
+    }
   } else if (received_measurement == false) {
+    if (MODEL_0) {
     B(1) = 1;  //[ms]
     X_prediction_ahead = A * X_prediction_ahead + B * u;
+    }
+    else if (MODEL_1){
+      A(0,3) = 1;  //[ms]
+      A(1,4) = 1;  //[ms]
+      A(2,5) = 1;  //[ms]
+      X_prediction_ahead = A * X_prediction_ahead + B * u;
+    }
   }
 
   //  UNCOMMENT for ROS camera camera (non) real-time communications
@@ -410,12 +451,12 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       v_star[0] = 0;
       v_star[1] = 0.0341;
       v_star[2] = 0;
-//      offline just demo KF
-//      r_star_2[0] = x_star(k_KF);
-//      r_star_2[1] = y_star(k_KF);
-//      r_star_2[2] = z_star(k_KF);
-//      k_KF += 1;
-    //      online KF
+      //      offline just demo KF
+      //      r_star_2[0] = x_star(k_KF);
+      //      r_star_2[1] = y_star(k_KF);
+      //      r_star_2[2] = z_star(k_KF);
+      //      k_KF += 1;
+      //      online KF
       r_star_2[0] = X_prediction_ahead(0);
       r_star_2[1] = X_prediction_ahead(1);
       r_star_2[2] = X_prediction_ahead(2);
@@ -568,37 +609,49 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       std::cout << std::endl;
     }
     std::cout << "k=" << k << " \n";
-    warm_up = false;
     //    TODO this is not necessarily is going to lock
     //    publish message to switch on the conveyor belt
     if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
       STEPPERMOTOR_publisher_.msg_.vector.x = 1;
       STEPPERMOTOR_publisher_.msg_.vector.y = 2025;
-      STEPPERMOTOR_publisher_.msg_.header.stamp=ros::Time::now();
+      STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
       STEPPERMOTOR_publisher_.unlockAndPublish();
     }
-    //    TODO
-    k_KF = 0;
-    r_star_tf[0] = x_star(Eigen::last);
-    r_star_tf[1] = y_star(Eigen::last);
-    r_star_tf[2] = z_star(Eigen::last);
-
-    for (size_t i = 0; i < 7; ++i) {
-      if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
-        std::cout << "-------i=" << i << "\n";
-        std::cout << "-------NOOOOOOOOOOOO=" << dq_command(i) << "\n";
-        std::cout << "-------norm_e_EE_t=" << norm_e_EE_t << "\n";
-        if (std::signbit(dq_command(i))) {
-          dq_command(i) = -dq_max[i];
-        } else {
-          dq_command(i) = +dq_max[i];
-        }
-      }
-      //      TODO do you need here to send command too?
-      velocity_joint_handles_[i].setCommand(dq_command(i));
+    //    TODO artificially wait at the begining: implement more efficient approach
+    artificial_wait_idx += 1;
+    if (artificial_wait_idx > 100) {
+      warm_up = false;
+      //    TODO
+      k_KF = 0;
+      //  // TODO uncomment for offline demo
+//      r_star_tf[0] = 511 / 1000;
+//      r_star_tf[1] = 150 / 1000;
+//      r_star_tf[2] = 101 / 1000;
+//      r_star_tf[0] = p_hat_w(0)/1000;
+//      r_star_tf[1] = p_hat_w(1)/1000;
+//      r_star_tf[2] = p_hat_w(2)/1000;
+      //      r_star_tf[0] = x_star(Eigen::last);
+      //      r_star_tf[1] = y_star(Eigen::last);
+      //      r_star_tf[2] = z_star(Eigen::last);
     }
-  } else if (norm_e_EE_t < 0.001 and warm_up == false) {
+    //
+    //    for (size_t i = 0; i < 7; ++i) {
+    //      if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
+    //        std::cout << "-------i=" << i << "\n";
+    //        std::cout << "-------NOOOOOOOOOOOO=" << dq_command(i) << "\n";
+    //        std::cout << "-------norm_e_EE_t=" << norm_e_EE_t << "\n";
+    //        if (std::signbit(dq_command(i))) {
+    //          dq_command(i) = -dq_max[i];
+    //        } else {
+    //          dq_command(i) = +dq_max[i];
+    //        }
+    //      }
+    //      //      TODO do you need here to send command too?
+    //      velocity_joint_handles_[i].setCommand(dq_command(i));
+    //    }
+  } else if ((norm_e_EE_t < 0.03 and warm_up == false) or k_KF>97) {
     std::cout << "STOPPING!!!!!!!!!!!!!!!" << " \n";
+    std::cout << "k_KF=" << k_KF << " \n";
     std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
     std::cout << "*******1-EEposition=\n";
     for (int i = 0; i < 3; i++) {
@@ -611,14 +664,35 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     std::cout << "k=" << k << " \n";
     PRIMITIVEVelocityController::stopRequest(ros::Time::now());
   } else {
-    //    TODO this is not necessarily is going to lock so I put here continuously to try to send switch on command
-    //    publish message to switch on the conveyor belt
-    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
-      STEPPERMOTOR_publisher_.msg_.vector.x = 1;
-      STEPPERMOTOR_publisher_.msg_.vector.y = 2025;
-      STEPPERMOTOR_publisher_.msg_.header.stamp=ros::Time::now();
-      STEPPERMOTOR_publisher_.unlockAndPublish();
-    }
+    std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
+    std::cout << "p_hat_w(0)=" << p_hat_w(0) << " \n";
+    std::cout << "p_hat_w(1)=" << p_hat_w(1) << " \n";
+    std::cout << "p_hat_w(2)=" << p_hat_w(2) << " \n";
+    std::cout << "EEposition(0)=" << EEposition(0) << " \n";
+    std::cout << "EEposition(1)=" << EEposition(1) << " \n";
+    std::cout << "EEposition(2)=" << EEposition(2) << " \n";
+    std::cout << "k=" << k << " \n";
+    std::cout << "k_KF=" << k_KF << " \n";
+
+    //    //    TODO is it efficient to poublish always like this?!
+    //    for (size_t i = 0; i < 10; ++i) {
+    //      //    publish message to switch on the conveyor belt
+    //      if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
+    //        STEPPERMOTOR_publisher_.msg_.vector.x = 1;
+    //        STEPPERMOTOR_publisher_.msg_.vector.y = 2025;
+    //        STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
+    //        STEPPERMOTOR_publisher_.unlockAndPublish();
+    //      }
+    //    }
+    //    //    TODO this is not necessarily is going to lock so I put here continuously to try to
+    //    send switch on command
+    //    //    publish message to switch on the conveyor belt
+    //    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
+    //      STEPPERMOTOR_publisher_.msg_.vector.x = 1;
+    //      STEPPERMOTOR_publisher_.msg_.vector.y = 2025;
+    //      STEPPERMOTOR_publisher_.msg_.header.stamp=ros::Time::now();
+    //      STEPPERMOTOR_publisher_.unlockAndPublish();
+    //    }
     for (size_t i = 0; i < 7; ++i) {
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         std::cout << "-------i=" << i << "\n";

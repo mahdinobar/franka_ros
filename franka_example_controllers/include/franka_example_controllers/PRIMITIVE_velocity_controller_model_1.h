@@ -60,7 +60,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   std::array<double, 16> initial_O_T_EE_{};
   std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_;  // seems to be franka_states
   int idx_1 = 0;
-//  TODO check
+  //  TODO check
   int k = 0;
   int idx_i3 = 0;
 
@@ -93,20 +93,20 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   static const int Target_Traj_ROWS = 6381;
   static const int Target_Traj_COLUMNS = 3;
   float r_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
-//  float v_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
+  //  float v_star[Target_Traj_ROWS][Target_Traj_COLUMNS];
   float q_star[Target_Traj_ROWS][9];
-//  std::array<double, 7> q_start{
-//      {-0.00155713, -0.7739, -0.00012461, -2.38384, -0.00188551, 1.56271, 0.806219}};
-//  std::array<double, 7> q_start{
-//      {0, -0.785398163397, 0, -2.35619449019, 0, 1.57079632679, 0.785398163397}};
-//  std::array<double, 3> r_star_0 = {0.30587, -0.00013972, 0.46695};
+  //  std::array<double, 7> q_start{
+  //      {-0.00155713, -0.7739, -0.00012461, -2.38384, -0.00188551, 1.56271, 0.806219}};
+  //  std::array<double, 7> q_start{
+  //      {0, -0.785398163397, 0, -2.35619449019, 0, 1.57079632679, 0.785398163397}};
+  //  std::array<double, 3> r_star_0 = {0.30587, -0.00013972, 0.46695};
   std::array<double, 3> r_star_0 = {0.514, -0.320,   0.101};
   Eigen::Matrix<double, 7, 1> dq_command = {0, 0, 0, 0, 0, 0, 0};
-//  std::array<double, 3> r_star_0 = {0.5145, -0.2698,  0.1541};
+  //  std::array<double, 3> r_star_0 = {0.5145, -0.2698,  0.1541};
 
-//  std::array<double, 3> r_star_tf = {+0.6250, -0.5250, +0.0250};
-//  std::array<double, 3> r_star_tf = {0.5145, 0.16734781111,  0.1541};
-//  std::array<double, 3> r_star_tf = {0.425,-0.025,0.025};
+  //  std::array<double, 3> r_star_tf = {+0.6250, -0.5250, +0.0250};
+  //  std::array<double, 3> r_star_tf = {0.5145, 0.16734781111,  0.1541};
+  //  std::array<double, 3> r_star_tf = {0.425,-0.025,0.025};
   std::array<double, 3> r_star_tf = {0.514, -0.270,   0.101};
   double v_star_dir[3];
   double v_star[3];
@@ -117,25 +117,25 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
                                   0.006981317008, 0.00872664626,  0.00872664626};  // dq_c [rad/1ms]
   //  Eigen::Matrix<double, 16, 1> T_F_ftc2_raw = {0.707, -0.707, 0, 0, 0.707, 0.707, 0, 0, 0, 0, 1,
   //  0, 0, 0, 0.1124, 1};
-//  Eigen::Matrix<double, 4, 4> T_F_ftc2{{0.707, 0.707, 0.0, 0.0},
-//                                       {-0.707, 0.707, 0.0, 0.0},
-//                                       {0.0, 0.0, 1.0, 0.1124},
-//                                       {0.0, 0.0, 0.0, 1.0}};
-//  Eigen::Matrix<double, 4, 4> T_ftc2_ftc{{1.0, 0.0, 0.0, 0.0},
-//                                       {0, 1, 0, 0},
-//                                       {0, 0, 1, -0.009},
-//                                       {0, 0, 0, 1}};
+  //  Eigen::Matrix<double, 4, 4> T_F_ftc2{{0.707, 0.707, 0.0, 0.0},
+  //                                       {-0.707, 0.707, 0.0, 0.0},
+  //                                       {0.0, 0.0, 1.0, 0.1124},
+  //                                       {0.0, 0.0, 0.0, 1.0}};
+  //  Eigen::Matrix<double, 4, 4> T_ftc2_ftc{{1.0, 0.0, 0.0, 0.0},
+  //                                       {0, 1, 0, 0},
+  //                                       {0, 0, 1, -0.009},
+  //                                       {0, 0, 0, 1}};
   Eigen::Matrix<double, 4, 4> T_ftc2_ftc{{1.0, 0.0, 0.0, 0.0},
-                                       {0, 1, 0, 0},
-                                       {0, 0, 1, 0},
-                                       {0, 0, 0, 1}};
+                                         {0, 1, 0, 0},
+                                         {0, 0, 1, 0},
+                                         {0, 0, 0, 1}};
   void cmdVelCallback(const geometry_msgs::Vector3Stamped& data);
   void cmdVelCallback2(const std_msgs::Float64MultiArray& command);
-//  Eigen::Matrix<double, 4, 4> T_ftc_ca;
-//  Eigen::Vector<double, 3> p_obj_o = {0, 0, 0};
-//  Eigen::Vector<double, 3> drift = {0.057, 0.016, 0.018};
+  //  Eigen::Matrix<double, 4, 4> T_ftc_ca;
+  //  Eigen::Vector<double, 3> p_obj_o = {0, 0, 0};
+  //  Eigen::Vector<double, 3> drift = {0.057, 0.016, 0.018};
   Eigen::Vector<double, 3> drift = {0,0,0};
-//  Eigen::Vector<double, 3> p_obj_ca = {0, 0, 0};
+  //  Eigen::Vector<double, 3> p_obj_ca = {0, 0, 0};
   Eigen::Vector<double, 3> p_hat_w {0, 0, 0};
   //  Eigen::Vector<double, 3> p_Ftoftc2_F = {0, 0, +0.1124};
   //  Eigen::Vector<double, 3> p_ftc2_o = {0, 0, 0};
@@ -147,50 +147,66 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   bool warm_up = true;
   int k_KF;
 
-  // TODO bring into starting?
-  Eigen::Matrix<double, 3, 3> A{{1, 0, 0},
-                                {0, 1, 0},
-                                {0, 0, 1}};
-  Eigen::Matrix<double, 3, 1> B{{0},
-                                {1},
-                                {0}};
-  Eigen::Matrix<double, 3, 3> C{{1, 0, 0},
-                                {0, 1, 0},
-                                {0, 0, 1}};
-  // covariance matrix of the state estimation error P0- abbreviated as "state covariance matrix"
-  Eigen::Matrix<double, 3, 3> P0{{1, 0, 0},
-                                 {0, 4, 0},
-                                 {0, 0, 1}};
+  Matrix<double, 6, 6> A{{1, 0, 0, 0, 0, 0},
+                         {0, 1, 0, 0, 0, 0},
+                         {0, 0, 1, 0, 0, 0},
+                         {0, 0, 0, 1, 0, 0},
+                         {0, 0, 0, 0, 1, 0},
+                         {0, 0, 0, 0, 0, 1}};
 
-  // covariance matrix of the measurement noise
-  Eigen::Matrix<double, 3, 3> R{{4, 0, 0},
-                                {0, 25, 0},
-                                {0, 0, 4}};
-  // covariance matrix of the state disturbance
-  Eigen::Matrix<double, 3, 3> Q{{1, 0, 0},
-                                {0, 4, 0},
-                                {0, 0, 1}};
-  // guess of the initial state estimate
-  Eigen::Matrix<double, 3, 1> x0{{514},
-                                 {-270},
-                                 {101}};
-  Eigen::Matrix<double, 1, 1> u{{0.0341}};
+  Matrix<double, 6, 1> B{{0},
+                         {0},
+                         {0},
+                         {0},
+                         {0},
+                         {0}};
+
+
+  Matrix<double, 3, 6> C{{1, 0, 0, 0, 0, 0},
+                         {0, 1, 0, 0, 0, 0},
+                         {0, 0, 1, 0, 0, 0}};
+
+  Matrix<double, 6, 6> P0{{1, 0, 0, 0, 0, 0},
+                          {0, 4, 0, 0, 0, 0},
+                          {0, 0, 1, 0, 0, 0},
+                          {0, 0, 0, 1, 0, 0},
+                          {0, 0, 0, 0, 4, 0},
+                          {0, 0, 0, 0, 0, 1}};
+
+  Matrix<double, 3, 3> R{{1, 0, 0},
+                            {0, 4, 0},
+                            {0, 0, 1}};
+
+  Matrix<double, 6, 6> Q{{0, 0, 0, 0,     0,     0},
+                            {0, 0, 0, 0,     0,     0},
+                            {0, 0, 0, 0,     0,     0},
+                            {0, 0, 0, 65e-3, 0,     0},
+                            {0, 0, 0, 0,     13e-3, 0},
+                            {0, 0, 0, 0,     0,     65e-3}};
+
+  Matrix<double, 6, 1> x0{{514},
+                             {-270},
+                             {101},
+                             {0},
+                             {0.0341},
+                             {0}};
+
+  Eigen::Matrix<double, 1, 1> u{{0}};
+
+
   //  TODO
   unsigned int maxDataSamples_KF = 2;
-  double u_KF = 0.0341;
   bool received_measurement=false;
   double dt;
 
 
-  Eigen::Matrix<double, 3, 1> X_prediction_ahead =x0;
-  Eigen::Matrix<double, 3, 1> estimatesAposteriori =x0;
-  Eigen::Matrix<double, 3, 1> estimatesApriori;
-  Eigen::Matrix<double, 3, 3> covarianceAposteriori =P0;
-  Eigen::Matrix<double, 3, 3> covarianceApriori;
-  Eigen::Matrix<double, 3, 3> gainMatrices;
+  Eigen::Matrix<double, 6, 1> X_prediction_ahead =x0;
+  Eigen::Matrix<double, 6, 1> estimatesAposteriori =x0;
+  Eigen::Matrix<double, 6, 1> estimatesApriori;
+  Eigen::Matrix<double, 6, 6> covarianceAposteriori =P0;
+  Eigen::Matrix<double, 6, 6> covarianceApriori;
+  Eigen::Matrix<double, 6, 6> gainMatrices;
   int artificial_wait_idx=0;
-
-
 
 
 };
