@@ -147,66 +147,52 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   bool warm_up = true;
   int k_KF;
 
-  Eigen::Matrix<double, 6, 6> A{{1, 0, 0, 0, 0, 0},
-                         {0, 1, 0, 0, 0, 0},
-                         {0, 0, 1, 0, 0, 0},
-                         {0, 0, 0, 1, 0, 0},
-                         {0, 0, 0, 0, 1, 0},
-                         {0, 0, 0, 0, 0, 1}};
+  // TODO bring into starting?
+  Eigen::Matrix<double, 3, 3> A{{1, 0, 0},
+                                {0, 1, 0},
+                                {0, 0, 1}};
+  Eigen::Matrix<double, 3, 1> B{{0},
+                                {1},
+                                {0}};
+  Eigen::Matrix<double, 3, 3> C{{1, 0, 0},
+                                {0, 1, 0},
+                                {0, 0, 1}};
+  // covariance matrix of the state estimation error P0- abbreviated as "state covariance matrix"
+  Eigen::Matrix<double, 3, 3> P0{{1, 0, 0},
+                                 {0, 4, 0},
+                                 {0, 0, 1}};
 
-  Eigen::Matrix<double, 6, 1> B{{0},
-                         {0},
-                         {0},
-                         {0},
-                         {0},
-                         {0}};
-
-
-  Eigen::Matrix<double, 3, 6> C{{1, 0, 0, 0, 0, 0},
-                         {0, 1, 0, 0, 0, 0},
-                         {0, 0, 1, 0, 0, 0}};
-
-  Eigen::Matrix<double, 6, 6> P0{{1, 0, 0, 0, 0, 0},
-                          {0, 4, 0, 0, 0, 0},
-                          {0, 0, 1, 0, 0, 0},
-                          {0, 0, 0, 1, 0, 0},
-                          {0, 0, 0, 0, 4, 0},
-                          {0, 0, 0, 0, 0, 1}};
-
-  Eigen::Matrix<double, 3, 3> R{{1, 0, 0},
-                            {0, 4, 0},
-                            {0, 0, 1}};
-
-  Eigen::Matrix<double, 6, 6> Q{{0, 0, 0, 0,     0,     0},
-                            {0, 0, 0, 0,     0,     0},
-                            {0, 0, 0, 0,     0,     0},
-                            {0, 0, 0, 65e-3, 0,     0},
-                            {0, 0, 0, 0,     13e-3, 0},
-                            {0, 0, 0, 0,     0,     65e-3}};
-
-  Eigen::Matrix<double, 6, 1> x0{{514},
-                             {-270},
-                             {101},
-                             {0},
-                             {0.0341},
-                             {0}};
-
-  Eigen::Matrix<double, 1, 1> u{{0}};
-
-
+  // covariance matrix of the measurement noise
+  Eigen::Matrix<double, 3, 3> R{{4, 0, 0},
+                                {0, 25, 0},
+                                {0, 0, 4}};
+  // covariance matrix of the state disturbance
+  Eigen::Matrix<double, 3, 3> Q{{1, 0, 0},
+                                {0, 4, 0},
+                                {0, 0, 1}};
+  // guess of the initial state estimate
+  Eigen::Matrix<double, 3, 1> x0{{514},
+                                 {-270},
+                                 {101}};
+  Eigen::Matrix<double, 1, 1> u;
   //  TODO
   unsigned int maxDataSamples_KF = 2;
   bool received_measurement=false;
   double dt;
 
 
-  Eigen::Matrix<double, 6, 1> X_prediction_ahead =x0;
-  Eigen::Matrix<double, 6, 1> estimatesAposteriori =x0;
-  Eigen::Matrix<double, 6, 1> estimatesApriori;
-  Eigen::Matrix<double, 6, 6> covarianceAposteriori =P0;
-  Eigen::Matrix<double, 6, 6> covarianceApriori;
-  Eigen::Matrix<double, 6, 3> gainMatrices;
+  Eigen::Matrix<double, 3, 1> X_prediction_ahead =x0;
+  Eigen::Matrix<double, 3, 1> estimatesAposteriori =x0;
+  Eigen::Matrix<double, 3, 1> estimatesApriori;
+  Eigen::Matrix<double, 3, 3> covarianceAposteriori =P0;
+  Eigen::Matrix<double, 3, 3> covarianceApriori;
+  Eigen::Matrix<double, 3, 3> gainMatrices;
   int artificial_wait_idx=0;
+
+//  std::random_device rd{};
+//  std::normal_distribution<double> gauss_dist{0.0349, 0.000050776};
+
+
 
 
 };

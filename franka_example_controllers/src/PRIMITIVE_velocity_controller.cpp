@@ -1,13 +1,15 @@
 // Copyright (c) 2017 Franka Emika GmbH
 // Use of this source code is governed by the Apache-2.0 license, see LICENSE
 #define MODEL_0 0  // or 0 if you want MODEL_0 to be false
-#define MODEL_1 1  // or 0 if you want MODEL_1 to be false
+#define MODEL_1 0  // or 0 if you want MODEL_1 to be false
+#define MODEL_2 1  // or 0 if you want MODEL_2 to be false
 #if MODEL_0
 #include <franka_example_controllers/PRIMITIVE_velocity_controller.h>
 #elif MODEL_1
 #include <franka_example_controllers/PRIMITIVE_velocity_controller_model_1.h>
+#elif MODEL_2
+#include <franka_example_controllers/PRIMITIVE_velocity_controller_model_2.h>
 #endif
-
 
 #include <cmath>
 
@@ -31,6 +33,7 @@
 #include "geometry_msgs/Vector3.h"
 #include "geometry_msgs/Vector3Stamped.h"
 #include "std_msgs/Float64MultiArray.h"
+#include <random>
 
 // #include "KalmanFilter.cpp"
 // #include "franka_example_controllers/KalmanFilter.h"
@@ -327,7 +330,55 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
 
   //  TODO can you implement KF  more efficiently?
   if (received_measurement == true) {
-    if (MODEL_0) {
+    //    if (MODEL_0) {
+    //      B(1) = dt;  //[ms]
+    //      estimatesApriori = A * estimatesAposteriori + B * u;
+    //      covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
+    //      Eigen::Matrix<double, 3, 3> Sk;
+    //      Sk = R + C * covarianceApriori * (C.transpose());
+    //      Sk = Sk.inverse();
+    //      gainMatrices = covarianceApriori * (C.transpose()) * Sk;
+    //      estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C *
+    //      estimatesApriori); Eigen::MatrixXd In; In = Eigen::MatrixXd::Identity(3, 3);
+    //      Eigen::MatrixXd IminusKC;
+    //      IminusKC.resize(3, 3);
+    //      IminusKC = In - gainMatrices * C;  // I-KC
+    //      covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
+    //                              gainMatrices * R * (gainMatrices.transpose());
+    //      X_prediction_ahead = estimatesAposteriori;
+    //      received_measurement = false;
+    //      k_KF += 1;
+    //    }
+    //    if (MODEL_1){
+    //      A(0,3) = dt;  //[ms]
+    //      A(1,4) = dt;  //[ms]
+    //      A(2,5) = dt;  //[ms]
+    //      estimatesApriori = A * estimatesAposteriori + B * u;
+    //      covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
+    //      Eigen::Matrix<double, 3,3> Sk;
+    //      Sk = R + C * covarianceApriori * (C.transpose());
+    //      Sk = Sk.inverse();
+    //      gainMatrices = covarianceApriori * (C.transpose()) * Sk;
+    //      estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C *
+    //      estimatesApriori); Eigen::MatrixXd In; In = Eigen::MatrixXd::Identity(6, 6);
+    //      Eigen::MatrixXd IminusKC;
+    //      IminusKC.resize(6, 6);
+    //      IminusKC = In - gainMatrices * C;  // I-KC
+    //      covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
+    //                              gainMatrices * R * (gainMatrices.transpose());
+    //      X_prediction_ahead = estimatesAposteriori;
+    //      received_measurement = false;
+    //      k_KF += 1;
+    //    }
+    if (MODEL_2) {
+      //          std::random_device rd{};
+      //          std::mt19937 gen{rd()};
+      //          std::normal_distribution<double> d{0.0349, 0.000050776};
+      std::random_device rd{};
+      std::mt19937 gen{rd()};
+      std::normal_distribution<double> gauss_dist{0.0349, 0.000050776};
+      u(0, 0) = gauss_dist(gen);
+      cout << "u(0, 0)=" << u(0, 0) << endl;
       B(1) = dt;  //[ms]
       estimatesApriori = A * estimatesAposteriori + B * u;
       covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
@@ -347,37 +398,24 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       received_measurement = false;
       k_KF += 1;
     }
-    else if (MODEL_1){
-      A(0,3) = dt;  //[ms]
-      A(1,4) = dt;  //[ms]
-      A(2,5) = dt;  //[ms]
-      estimatesApriori = A * estimatesAposteriori + B * u;
-      covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
-      Eigen::Matrix<double, 6,6> Sk;
-      Sk = R + C * covarianceApriori * (C.transpose());
-      Sk = Sk.inverse();
-      gainMatrices = covarianceApriori * (C.transpose()) * Sk;
-      estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
-      Eigen::MatrixXd In;
-      In = Eigen::MatrixXd::Identity(6, 6);
-      Eigen::MatrixXd IminusKC;
-      IminusKC.resize(6, 6);
-      IminusKC = In - gainMatrices * C;  // I-KC
-      covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
-                              gainMatrices * R * (gainMatrices.transpose());
-      X_prediction_ahead = estimatesAposteriori;
-      received_measurement = false;
-      k_KF += 1;
-    }
   } else if (received_measurement == false) {
-    if (MODEL_0) {
-    B(1) = 1;  //[ms]
-    X_prediction_ahead = A * X_prediction_ahead + B * u;
-    }
-    else if (MODEL_1){
-      A(0,3) = 1;  //[ms]
-      A(1,4) = 1;  //[ms]
-      A(2,5) = 1;  //[ms]
+    //    if (MODEL_0) {
+    //    B(1) = 1;  //[ms]
+    //    X_prediction_ahead = A * X_prediction_ahead + B * u;
+    //    }
+    //    if (MODEL_1){
+    //      A(0,3) = 1;  //[ms]
+    //      A(1,4) = 1;  //[ms]
+    //      A(2,5) = 1;  //[ms]
+    //      X_prediction_ahead = A * X_prediction_ahead + B * u;
+    //    }
+    if (MODEL_2) {
+      std::random_device rd{};
+      std::mt19937 gen{rd()};
+      std::normal_distribution<double> gauss_dist{0.0349, 0.000050776};
+      u(0, 0) = gauss_dist(gen);
+      cout << "u(0, 0)=" << u(0, 0) << endl;
+      B(1) = 1;  //[ms]
       X_prediction_ahead = A * X_prediction_ahead + B * u;
     }
   }
@@ -624,12 +662,12 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       //    TODO
       k_KF = 0;
       //  // TODO uncomment for offline demo
-//      r_star_tf[0] = 511 / 1000;
-//      r_star_tf[1] = 150 / 1000;
-//      r_star_tf[2] = 101 / 1000;
-//      r_star_tf[0] = p_hat_w(0)/1000;
-//      r_star_tf[1] = p_hat_w(1)/1000;
-//      r_star_tf[2] = p_hat_w(2)/1000;
+      //      r_star_tf[0] = 511 / 1000;
+      //      r_star_tf[1] = 150 / 1000;
+      //      r_star_tf[2] = 101 / 1000;
+      //      r_star_tf[0] = p_hat_w(0)/1000;
+      //      r_star_tf[1] = p_hat_w(1)/1000;
+      //      r_star_tf[2] = p_hat_w(2)/1000;
       //      r_star_tf[0] = x_star(Eigen::last);
       //      r_star_tf[1] = y_star(Eigen::last);
       //      r_star_tf[2] = z_star(Eigen::last);
@@ -649,7 +687,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //      //      TODO do you need here to send command too?
     //      velocity_joint_handles_[i].setCommand(dq_command(i));
     //    }
-  } else if ((norm_e_EE_t < 0.03 and warm_up == false) or k_KF>97) {
+  } else if ((norm_e_EE_t < 0.03 and warm_up == false) or k_KF > 97) {
     std::cout << "STOPPING!!!!!!!!!!!!!!!" << " \n";
     std::cout << "k_KF=" << k_KF << " \n";
     std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
