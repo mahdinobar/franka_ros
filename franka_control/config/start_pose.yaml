@@ -7,12 +7,35 @@
 #  $(arg arm_id)_joint6: 1.57079632679
 #  $(arg arm_id)_joint7: 0.785398163397
 
-#joint poses corrospond to r_star_tf_ftc2 = {0.514, -0.320,   0.101}; with tolerance 1 mm
+##joint poses corrospond to r_star_tf_ftc2 = {0.514, -0.320,   0.101}; with tolerance 1 mm
+#joint_pose:
+#  $(arg arm_id)_joint1: -0.265687
+#  $(arg arm_id)_joint2: 0.502712
+#  $(arg arm_id)_joint3: -0.257185
+#  $(arg arm_id)_joint4: -1.999945
+#  $(arg arm_id)_joint5: -0.145195
+#  $(arg arm_id)_joint6: 2.466326
+#  $(arg arm_id)_joint7: 0.802872
+
+##joint poses corrospond to r_star_tf_ftc2 = {0.513, -0.2715-0.030,   0.1002}; manually measured upper left apriltag corner with tolerance 1 mm by my PI controller
+#joint_pose:
+#  $(arg arm_id)_joint1: -0.2559908766471892
+#  $(arg arm_id)_joint2: 0.5078630371448185
+#  $(arg arm_id)_joint3: -0.24428342907650097
+#  $(arg arm_id)_joint4: -2.014559566921897
+#  $(arg arm_id)_joint5: -0.13981949558806908
+#  $(arg arm_id)_joint6: 2.4610196815486907
+#  $(arg arm_id)_joint7: 0.8183486256202034
+
+
+#joint poses corrospond to r_star_tf_ftc2 = {0.534, -0.2965, 0.1542}; manually measured upper left apriltag corner with tolerance 1 mm by my PI controller
 joint_pose:
-  $(arg arm_id)_joint1: -0.265687
-  $(arg arm_id)_joint2: 0.502712
-  $(arg arm_id)_joint3: -0.257185
-  $(arg arm_id)_joint4: -1.999945
-  $(arg arm_id)_joint5: -0.145195
-  $(arg arm_id)_joint6: 2.466326
-  $(arg arm_id)_joint7: 0.802872
+  $(arg arm_id)_joint1: -0.24160292308450512
+  $(arg arm_id)_joint2: 0.4132453289912173
+  $(arg arm_id)_joint3: -0.24160502188821328
+  $(arg arm_id)_joint4: -2.012426832981177
+  $(arg arm_id)_joint5: -0.1389382115601044
+  $(arg arm_id)_joint6: 2.4397471245148825
+  $(arg arm_id)_joint7: 0.8195687449770361
+
+
