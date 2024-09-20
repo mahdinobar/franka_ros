@@ -1,8 +1,8 @@
 // Copyright (c) 2017 Franka Emika GmbH
 // Use of this source code is governed by the Apache-2.0 license, see LICENSE
-#define MODEL_0 0  // or 0 if you want MODEL_0 to be false
+#define MODEL_0 1  // or 0 if you want MODEL_0 to be false
 #define MODEL_1 0  // or 0 if you want MODEL_1 to be false
-#define MODEL_2 1  // or 0 if you want MODEL_2 to be false
+#define MODEL_2 0  // or 0 if you want MODEL_2 to be false
 #if MODEL_0
 #include <franka_example_controllers/PRIMITIVE_velocity_controller.h>
 #elif MODEL_1
@@ -29,11 +29,11 @@
 #include <stdlib.h>
 #include <fstream>
 #include <iostream>
+#include <random>
 #include <string>
 #include "geometry_msgs/Vector3.h"
 #include "geometry_msgs/Vector3Stamped.h"
 #include "std_msgs/Float64MultiArray.h"
-#include <random>
 
 // #include "KalmanFilter.cpp"
 // #include "franka_example_controllers/KalmanFilter.h"
@@ -100,7 +100,7 @@ void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Sta
   command_struct_.x = data.vector.x;
   command_struct_.y = data.vector.y;
   //  TODO pay attention
-  command_struct_.z = data.vector.z + 33;
+  command_struct_.z = data.vector.z + 32.3;
   //  TODO correct time stamp must be immediately after capturing data?e.g.,timestamp of the depth
   //  map?
   command_struct_.stamp = ros::Time::now();
@@ -108,16 +108,16 @@ void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Sta
 
   received_measurement = true;
 
-  cout << "camera measurement received!" << endl;
+  cout << "Camera measurement received!" << endl;
   cout << "data.x" << data.vector.x << endl;
   cout << "data.y" << data.vector.y << endl;
   cout << "data.z" << data.vector.z << endl;
-  double t_measurement = command_struct_.stamp.toSec();
-  //      cout << "t_measurement=" << t_measurement << endl;
-  //      cout << "t_0=" << t_0 << endl;
-  dt = t_measurement - t_0;
-  //      cout << "dt=" << dt << endl;
-  t_0 = t_measurement;
+  //  double t_measurement = command_struct_.stamp.toSec();
+  //  //      cout << "t_measurement=" << t_measurement << endl;
+  //  //      cout << "t_0=" << t_0 << endl;
+  //  dt = t_measurement - t_0;
+  //  //      cout << "dt=" << dt << endl;
+  //  t_0 = t_measurement;
 }
 void PRIMITIVEVelocityController::cmdVelCallback2(const std_msgs::Float64MultiArray& command) {
   command_struct_2_.data = command.data;
@@ -266,23 +266,20 @@ void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
   //      v_star[row][column] = number_v;
   //    }
   //  }
-  std::string x_fileToOpen =
-      "/home/mahdi/Documents/kalman/myCode/logs/measurements/x_star_model_1.csv";
-  std::string y_fileToOpen =
-      "/home/mahdi/Documents/kalman/myCode/logs/measurements/y_star_model_1.csv";
-  std::string z_fileToOpen =
-      "/home/mahdi/Documents/kalman/myCode/logs/measurements/z_star_model_1.csv";
-  std::string t_fileToOpen = "/home/mahdi/Documents/kalman/myCode/logs/measurements/t_model_1.csv";
-  x_star = CSVopen(x_fileToOpen) / 1000;
-  y_star = CSVopen(y_fileToOpen) / 1000;
-  z_star = CSVopen(z_fileToOpen) / 1000;
-  t_star = CSVopen(t_fileToOpen);
-  //  std::cout << "x_star=" << x_star <<"\n";
-  //  std::cout << "y_star(0)=" << y_star(0) << "\n";
-  //  std::cout << "y_star(last)=" << y_star(Eigen::last) << "\n";
-  //  std::cout << "y_star(1000)=" << y_star(1000) <<"\n";
-  //  std::cout << "z_star=" << z_star <<"\n";
-  //  std::cout << "t_star=" << t_star <<"\n";
+  ////  load offline measurement data just for development
+  //  std::string x_fileToOpen =
+  //      "/home/mahdi/Documents/kalman/myCode/logs/measurements/x_star_model_1.csv";
+  //  std::string y_fileToOpen =
+  //      "/home/mahdi/Documents/kalman/myCode/logs/measurements/y_star_model_1.csv";
+  //  std::string z_fileToOpen =
+  //      "/home/mahdi/Documents/kalman/myCode/logs/measurements/z_star_model_1.csv";
+  //  std::string t_fileToOpen =
+  //  "/home/mahdi/Documents/kalman/myCode/logs/measurements/t_model_1.csv"; x_star =
+  //  CSVopen(x_fileToOpen) / 1000; y_star = CSVopen(y_fileToOpen) / 1000; z_star =
+  //  CSVopen(z_fileToOpen) / 1000; t_star = CSVopen(t_fileToOpen); std::cout << "x_star=" << x_star
+  //  <<"\n"; std::cout << "y_star(0)=" << y_star(0) << "\n"; std::cout << "y_star(last)=" <<
+  //  y_star(Eigen::last) << "\n"; std::cout << "y_star(1000)=" << y_star(1000) <<"\n"; std::cout <<
+  //  "z_star=" << z_star <<"\n"; std::cout << "t_star=" << t_star <<"\n";
 
   // l2-norm
   double accum = 0.;
@@ -296,454 +293,381 @@ void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
 void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Duration& period) {
   //  TODO improve how smoothen initially by mp
   int mp = 1;
-  if (k > 100) {
-    mp = 1;
-  }
-  double dti1 = 0.001 * mp;
-  //  //    TODO check joints_pose_ updates and i.c. is correct
-  //  for (size_t i = 0; i < 7; ++i) {
-  //    joints_pose_[i] = velocity_joint_handles_[i].getPosition();
-  //  }
-  franka::RobotState robot_state = state_handle_->getRobotState();
-  Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
-  Eigen::Vector3d EEposition(transform.translation());
-
-  Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
-  Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
-
   //  TODO Attention on subscription rate
-  if (k % (mp * 100) == 0) {
+  if (k % (mp * 1) == 0) {
     try {
       Commands curr_cmd = *(command_.readFromRT());
+      //      TODO Pay attention
       p_hat_w(0) = curr_cmd.x;
       p_hat_w(1) = curr_cmd.y;
-      //      TODO Pay attention
       p_hat_w(2) = curr_cmd.z;
       // TODO
       double t_measurement = curr_cmd.stamp.toSec();
       dt = t_measurement - t_0;
       t_0 = t_measurement;
     } catch (int N) {
-      std::cout << "CANNOT hear p_hat_w!" << "\n";
+      std::cout << "ERROR: CANNOT hear p_hat_w!" << "\n";
     }
   }
+  if (k > 5000) {
+    double dti1 = 0.001 * mp;
+    //  //    TODO check joints_pose_ updates and i.c. is correct
+    //  for (size_t i = 0; i < 7; ++i) {
+    //    joints_pose_[i] = velocity_joint_handles_[i].getPosition();
+    //  }
+    franka::RobotState robot_state = state_handle_->getRobotState();
+    Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
+    Eigen::Vector3d EEposition(transform.translation());
 
-  //  TODO can you implement KF  more efficiently?
-  if (received_measurement == true) {
-    //    if (MODEL_0) {
-    //      B(1) = dt;  //[ms]
-    //      estimatesApriori = A * estimatesAposteriori + B * u;
-    //      covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
-    //      Eigen::Matrix<double, 3, 3> Sk;
-    //      Sk = R + C * covarianceApriori * (C.transpose());
-    //      Sk = Sk.inverse();
-    //      gainMatrices = covarianceApriori * (C.transpose()) * Sk;
-    //      estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C *
-    //      estimatesApriori); Eigen::MatrixXd In; In = Eigen::MatrixXd::Identity(3, 3);
-    //      Eigen::MatrixXd IminusKC;
-    //      IminusKC.resize(3, 3);
-    //      IminusKC = In - gainMatrices * C;  // I-KC
-    //      covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
-    //                              gainMatrices * R * (gainMatrices.transpose());
-    //      X_prediction_ahead = estimatesAposteriori;
-    //      received_measurement = false;
-    //      k_KF += 1;
+    Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
+    Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
+
+    //  UNCOMMENT for ROS camera camera (non) real-time communications
+    //  if (k % (mp * 100) == 0) {
+    //    try {
+    //      Commands curr_cmd = *(command_.readFromRT());
+    //      //      std::cout << "+curr_cmd.x=" << curr_cmd.x << "\n";
+    //      p_hat_w(0) = curr_cmd.x;
+    //      p_hat_w(1) = curr_cmd.y;
+    //      p_hat_w(2) = curr_cmd.z;
+    //    } catch (int N) {
+    //      std::cout << "CANNOT hear p_hat_w!" << "\n";
     //    }
-    //    if (MODEL_1){
-    //      A(0,3) = dt;  //[ms]
-    //      A(1,4) = dt;  //[ms]
-    //      A(2,5) = dt;  //[ms]
-    //      estimatesApriori = A * estimatesAposteriori + B * u;
-    //      covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
-    //      Eigen::Matrix<double, 3,3> Sk;
-    //      Sk = R + C * covarianceApriori * (C.transpose());
-    //      Sk = Sk.inverse();
-    //      gainMatrices = covarianceApriori * (C.transpose()) * Sk;
-    //      estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C *
-    //      estimatesApriori); Eigen::MatrixXd In; In = Eigen::MatrixXd::Identity(6, 6);
-    //      Eigen::MatrixXd IminusKC;
-    //      IminusKC.resize(6, 6);
-    //      IminusKC = In - gainMatrices * C;  // I-KC
-    //      covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
-    //                              gainMatrices * R * (gainMatrices.transpose());
-    //      X_prediction_ahead = estimatesAposteriori;
-    //      received_measurement = false;
-    //      k_KF += 1;
+    //    try {
+    //      Commands2 curr_cmd2 = *(command_2_.readFromRT());
+    //      //      std::cout << "+curr_cmd2.data[0]=" << curr_cmd2.data[0] << "\n";
+    //      Eigen::Map<Eigen::Matrix<double, 4, 4>> T_o_ftc(robot_state.O_T_EE.data());
+    //      //      Eigen::Matrix4d T_o_ftc2 = T_o_F * T_F_ftc2;
+    //      for (int i = 0; i < 4; ++i) {
+    //        for (int j = 0; j < 4; ++j) {
+    //          T_ftc_ca(i, j) = curr_cmd2.data[i * 4 + j];
+    //        }
+    //      }
+    //      //            Eigen::Matrix4d T_o_ca = T_o_ftc.inverse()*T_ftc2_ftc*T_ftc_ca2;
+    //      Eigen::Matrix4d T_o_ca = T_o_ftc * T_ftc_ca;
+    //      //            Eigen::Matrix4d T_o_ca = T_ftc_ca2*T_ftc2_ftc*T_o_ftc.inverse();
+    //      Eigen::Affine3d transform_T_ca_o(T_o_ca);
+    //      Eigen::Vector3d t(transform_T_ca_o.translation());
+    //      //      Eigen::Matrix3d R(transform_T_ca_o.rotation());
+    //      Eigen::Matrix3d R = T_o_ca({0, 1, 2}, {0, 1, 2});
+    //      p_obj_o = R * p_hat_w + t + drift;
+    //      if (debug) {
+    //        std::cout << "+T_o_ftc=" << T_o_ftc << "\n";
+    //        //            std::cout << "+T_o_ftc.inverse()=" << T_o_ftc.inverse() << "\n";
+    //        //            std::cout << "+T_ftc2_ftc=" << T_ftc2_ftc << "\n";
+    //        std::cout << "+T_ftc_ca=" << T_ftc_ca << "\n";
+    //        std::cout << "+T_o_ca=" << T_o_ca << "\n";
+    //        std::cout << "+R=" << R << "\n";
+    //        std::cout << "+t=" << t << "\n";
+    //        std::cout << "+p_hat_w=" << p_hat_w << "\n";
+    //        std::cout << "+p_obj_o=" << p_obj_o << "\n";
+    //      }
+    //    } catch (int N) {
+    //      std::cout << "-CANNOT hear T_ftc_ca-" << "\n";
     //    }
-    if (MODEL_2) {
-      //          std::random_device rd{};
-      //          std::mt19937 gen{rd()};
-      //          std::normal_distribution<double> d{0.0349, 0.000050776};
-      std::random_device rd{};
-      std::mt19937 gen{rd()};
-      std::normal_distribution<double> gauss_dist{0.0349, 0.000050776};
-      u(0, 0) = gauss_dist(gen);
-      cout << "u(0, 0)=" << u(0, 0) << endl;
-      B(1) = dt;  //[ms]
-      estimatesApriori = A * estimatesAposteriori + B * u;
-      covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
-      Eigen::Matrix<double, 3, 3> Sk;
-      Sk = R + C * covarianceApriori * (C.transpose());
-      Sk = Sk.inverse();
-      gainMatrices = covarianceApriori * (C.transpose()) * Sk;
-      estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
-      Eigen::MatrixXd In;
-      In = Eigen::MatrixXd::Identity(3, 3);
-      Eigen::MatrixXd IminusKC;
-      IminusKC.resize(3, 3);
-      IminusKC = In - gainMatrices * C;  // I-KC
-      covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
-                              gainMatrices * R * (gainMatrices.transpose());
-      X_prediction_ahead = estimatesAposteriori;
-      received_measurement = false;
-      k_KF += 1;
-    }
-  } else if (received_measurement == false) {
-    //    if (MODEL_0) {
-    //    B(1) = 1;  //[ms]
-    //    X_prediction_ahead = A * X_prediction_ahead + B * u;
-    //    }
-    //    if (MODEL_1){
-    //      A(0,3) = 1;  //[ms]
-    //      A(1,4) = 1;  //[ms]
-    //      A(2,5) = 1;  //[ms]
-    //      X_prediction_ahead = A * X_prediction_ahead + B * u;
-    //    }
-    if (MODEL_2) {
-      std::random_device rd{};
-      std::mt19937 gen{rd()};
-      std::normal_distribution<double> gauss_dist{0.0349, 0.000050776};
-      u(0, 0) = gauss_dist(gen);
-      cout << "u(0, 0)=" << u(0, 0) << endl;
-      B(1) = 1;  //[ms]
-      X_prediction_ahead = A * X_prediction_ahead + B * u;
-    }
-  }
+    //  }
+    if (k % mp == 0) {
+      double v_star_dir_length = 34.1 / (1 + std::exp(-0.04 * (idx_1 - 250))) / 1000 -
+                                 34.1 / (1 + std::exp(-0.04 * (0 - 250))) / 1000;
 
-  //  UNCOMMENT for ROS camera camera (non) real-time communications
-  //  if (k % (mp * 100) == 0) {
-  //    try {
-  //      Commands curr_cmd = *(command_.readFromRT());
-  //      //      std::cout << "+curr_cmd.x=" << curr_cmd.x << "\n";
-  //      p_hat_w(0) = curr_cmd.x;
-  //      p_hat_w(1) = curr_cmd.y;
-  //      p_hat_w(2) = curr_cmd.z;
-  //    } catch (int N) {
-  //      std::cout << "CANNOT hear p_hat_w!" << "\n";
-  //    }
-  //    try {
-  //      Commands2 curr_cmd2 = *(command_2_.readFromRT());
-  //      //      std::cout << "+curr_cmd2.data[0]=" << curr_cmd2.data[0] << "\n";
-  //      Eigen::Map<Eigen::Matrix<double, 4, 4>> T_o_ftc(robot_state.O_T_EE.data());
-  //      //      Eigen::Matrix4d T_o_ftc2 = T_o_F * T_F_ftc2;
-  //      for (int i = 0; i < 4; ++i) {
-  //        for (int j = 0; j < 4; ++j) {
-  //          T_ftc_ca(i, j) = curr_cmd2.data[i * 4 + j];
-  //        }
-  //      }
-  //      //            Eigen::Matrix4d T_o_ca = T_o_ftc.inverse()*T_ftc2_ftc*T_ftc_ca2;
-  //      Eigen::Matrix4d T_o_ca = T_o_ftc * T_ftc_ca;
-  //      //            Eigen::Matrix4d T_o_ca = T_ftc_ca2*T_ftc2_ftc*T_o_ftc.inverse();
-  //      Eigen::Affine3d transform_T_ca_o(T_o_ca);
-  //      Eigen::Vector3d t(transform_T_ca_o.translation());
-  //      //      Eigen::Matrix3d R(transform_T_ca_o.rotation());
-  //      Eigen::Matrix3d R = T_o_ca({0, 1, 2}, {0, 1, 2});
-  //      p_obj_o = R * p_hat_w + t + drift;
-  //      if (debug) {
-  //        std::cout << "+T_o_ftc=" << T_o_ftc << "\n";
-  //        //            std::cout << "+T_o_ftc.inverse()=" << T_o_ftc.inverse() << "\n";
-  //        //            std::cout << "+T_ftc2_ftc=" << T_ftc2_ftc << "\n";
-  //        std::cout << "+T_ftc_ca=" << T_ftc_ca << "\n";
-  //        std::cout << "+T_o_ca=" << T_o_ca << "\n";
-  //        std::cout << "+R=" << R << "\n";
-  //        std::cout << "+t=" << t << "\n";
-  //        std::cout << "+p_hat_w=" << p_hat_w << "\n";
-  //        std::cout << "+p_obj_o=" << p_obj_o << "\n";
-  //      }
-  //    } catch (int N) {
-  //      std::cout << "-CANNOT hear T_ftc_ca-" << "\n";
-  //    }
-  //  }
-  if (k % mp == 0) {
-    //    std::cout << "t_star[idx_1]=" << t_star(idx_1) << "\n";
-    //    elapsed_time_ += period;
-    //    double v_star_dir_length =
-    //        0.02011276 + (-0.0003050539 - 0.02011276) /
-    //                         std::pow(1 + std::pow(idx_1 / 16.15651, 1.732438), 4.038572);
-    //    double v_star_dir_length =
-    //        (34.69208 +
-    //         (0.000003675498 - 34.69208) / std::pow(1 + std::pow(idx_1 / 115439.1, 4.234534),
-    //         15413090)) /
-    //        1000;
-
-    //    plot 34.1/(1+exp(-0.003*(x-2000))) in [0,4000]
-    double v_star_dir_length = 34.1 / (1 + std::exp(-0.04 * (idx_1 - 250))) / 1000 -
-                               34.1 / (1 + std::exp(-0.04 * (0 - 250))) / 1000;
-
-    if (warm_up == true) {
-      for (int i = 0; i < 3; ++i) {
-        v_star[i] = v_star_dir[i] / norm_v_star_dir * v_star_dir_length;
-        r_star_2[i] = dti1 * v_star[i] + r_star_2[i];
-      }
-    } else if (warm_up == false) {
-      v_star[0] = 0;
-      v_star[1] = 0.0341;
-      v_star[2] = 0;
-      //      offline just demo KF
-      //      r_star_2[0] = x_star(k_KF);
-      //      r_star_2[1] = y_star(k_KF);
-      //      r_star_2[2] = z_star(k_KF);
-      //      k_KF += 1;
-      //      online KF
-      r_star_2[0] = X_prediction_ahead(0);
-      r_star_2[1] = X_prediction_ahead(1);
-      r_star_2[2] = X_prediction_ahead(2);
-    }
-    std::array<double, 42> jacobian_array =
-        model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-    Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
-    std::vector<int> ind_translational_jacobian{0, 1, 2};
-    std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
-    Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
-    Eigen::MatrixXd J_translation_pinv;
-    //    franka::RobotState robot_state = state_handle_->getRobotState();
-    //    Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
-    //    Eigen::Vector3d EEposition(transform.translation());
-    //    Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
-    //    Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
-    double K_p = 1;
-    double K_i = 1;
-
-    e_t[0] = (r_star_2[0] - EEposition(0));
-    e_t[1] = (r_star_2[1] - EEposition(1));
-    e_t[2] = (r_star_2[2] - EEposition(2));
-    Eigen::Vector<double, 3> vc;
-    for (int i = 0; i < 3; ++i) {
-      I_e[i] += e_t[i] * dti1;
-      vc(i) = v_star[i] + K_p * e_t[i] +
-              K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*dti1 + K_d*(v_ref-v_e)
-    }
-    pseudoInverse(J_translation, J_translation_pinv);
-    dq_command = J_translation_pinv * vc;
-    //  TODO should idx_1 be updated here or end of call?
-    idx_1 += 1;
-
-    if (false) {
-      std::cout << "**************************************************idx_1=" << idx_1 << " \n";
-      std::cout << "period=" << period << " \n";
-      std::cout << "transform=\n";
-      for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-          std::cout << transform(i, j) << " ";
+      if (warm_up == true) {
+        for (int i = 0; i < 3; ++i) {
+          v_star[i] = v_star_dir[i] / norm_v_star_dir * v_star_dir_length;
+          r_star_2[i] = dti1 * v_star[i] + r_star_2[i];
         }
-        std::cout << std::endl;
+      } else if (warm_up == false) {
+        //  TODO can you implement KF  more efficiently?
+        if (received_measurement == true) {
+          if (MODEL_0) {
+            B(1) = dt;  //[ms]
+            estimatesApriori = A * estimatesAposteriori + B * u;
+            covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
+            Eigen::Matrix<double, 3, 3> Sk;
+            Sk = R + C * covarianceApriori * (C.transpose());
+            Sk = Sk.inverse();
+            gainMatrices = covarianceApriori * (C.transpose()) * Sk;
+            estimatesAposteriori =
+                estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
+            Eigen::MatrixXd In;
+            In = Eigen::MatrixXd::Identity(3, 3);
+            Eigen::MatrixXd IminusKC;
+            IminusKC.resize(3, 3);
+            IminusKC = In - gainMatrices * C;  // I-KC
+            covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
+                                    gainMatrices * R * (gainMatrices.transpose());
+            X_prediction_ahead = estimatesAposteriori;
+            received_measurement = false;
+            k_KF += 1;
+          }
+          if (MODEL_1) {
+            A(0, 3) = dt;  //[ms]
+            A(1, 4) = dt;  //[ms]
+            A(2, 5) = dt;  //[ms]
+            estimatesApriori = A * estimatesAposteriori + B * u;
+            covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
+            Eigen::Matrix<double, 3, 3> Sk;
+            Sk = R + C * covarianceApriori * (C.transpose());
+            Sk = Sk.inverse();
+            gainMatrices = covarianceApriori * (C.transpose()) * Sk;
+            estimatesAposteriori =
+                estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
+            Eigen::MatrixXd In;
+            In = Eigen::MatrixXd::Identity(6, 6);
+            Eigen::MatrixXd IminusKC;
+            IminusKC.resize(6, 6);
+            IminusKC = In - gainMatrices * C;  // I-KC
+            covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
+                                    gainMatrices * R * (gainMatrices.transpose());
+            X_prediction_ahead = estimatesAposteriori;
+            received_measurement = false;
+            k_KF += 1;
+          }
+          if (MODEL_2) {
+            //          std::random_device rd{};
+            //          std::mt19937 gen{rd()};
+            //          std::normal_distribution<double> d{0.0349, 0.000050776};
+            std::random_device rd{};
+            std::mt19937 gen{rd()};
+            std::normal_distribution<double> gauss_dist{0.0349, 0.000050776};
+            u(0, 0) = gauss_dist(gen);
+            cout << "u(0, 0)=" << u(0, 0) << endl;
+            B(1) = dt;  //[ms]
+            estimatesApriori = A * estimatesAposteriori + B * u;
+            covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
+            Eigen::Matrix<double, 3, 3> Sk;
+            Sk = R + C * covarianceApriori * (C.transpose());
+            Sk = Sk.inverse();
+            gainMatrices = covarianceApriori * (C.transpose()) * Sk;
+            estimatesAposteriori =
+                estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
+            Eigen::MatrixXd In;
+            In = Eigen::MatrixXd::Identity(3, 3);
+            Eigen::MatrixXd IminusKC;
+            IminusKC.resize(3, 3);
+            IminusKC = In - gainMatrices * C;  // I-KC
+            covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
+                                    gainMatrices * R * (gainMatrices.transpose());
+            X_prediction_ahead = estimatesAposteriori;
+            received_measurement = false;
+            k_KF += 1;
+          }
+        } else if (received_measurement == false) {
+          if (MODEL_0) {
+            B(1) = 1;  //[ms]
+            X_prediction_ahead = A * X_prediction_ahead + B * u;
+          }
+          if (MODEL_1) {
+            A(0, 3) = 1;  //[ms]
+            A(1, 4) = 1;  //[ms]
+            A(2, 5) = 1;  //[ms]
+            X_prediction_ahead = A * X_prediction_ahead + B * u;
+          }
+          if (MODEL_2) {
+            std::random_device rd{};
+            std::mt19937 gen{rd()};
+            std::normal_distribution<double> gauss_dist{0.0349, 0.000050776};
+            u(0, 0) = gauss_dist(gen);
+            cout << "u(0, 0)=" << u(0, 0) << endl;
+            B(1) = 1;  //[ms]
+            X_prediction_ahead = A * X_prediction_ahead + B * u;
+          }
+        }
+
+        if (MODEL_0) {
+          v_star[0] = 0;
+          v_star[1] = 0.0341;
+          v_star[2] = 0;
+          //      offline just demo KF
+          //      r_star_2[0] = x_star(k_KF);
+          //      r_star_2[1] = y_star(k_KF);
+          //      r_star_2[2] = z_star(k_KF);
+          //      k_KF += 1;
+          //      online KF
+          r_star_2[0] = X_prediction_ahead(0);
+          r_star_2[1] = X_prediction_ahead(1);
+          r_star_2[2] = X_prediction_ahead(2);
+        }
+        if (MODEL_1) {
+          r_star_2[0] = X_prediction_ahead(0);
+          r_star_2[1] = X_prediction_ahead(1);
+          r_star_2[2] = X_prediction_ahead(2);
+          v_star[0] = X_prediction_ahead(3);
+          v_star[1] = X_prediction_ahead(4);
+          v_star[2] = X_prediction_ahead(5);
+        }
+        if (MODEL_2) {
+          r_star_2[0] = X_prediction_ahead(0);
+          r_star_2[1] = X_prediction_ahead(1);
+          r_star_2[2] = X_prediction_ahead(2);
+          v_star[0] = 0;
+          v_star[1] = u(0, 0);
+          v_star[2] = 0;
+        }
       }
+      std::array<double, 42> jacobian_array =
+          model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+      Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
+      std::vector<int> ind_translational_jacobian{0, 1, 2};
+      std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
+      Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
+      Eigen::MatrixXd J_translation_pinv;
+
+      double K_p = 50;
+      double K_i = 50;
+
+      e_t[0] = (r_star_2[0] - EEposition(0));
+      e_t[1] = (r_star_2[1] - EEposition(1));
+      e_t[2] = (r_star_2[2] - EEposition(2));
+      Eigen::Vector<double, 3> vc;
+      for (int i = 0; i < 3; ++i) {
+        I_e[i] += e_t[i] * dti1;
+        vc(i) = v_star[i] + K_p * e_t[i] +
+                K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*dti1 + K_d*(v_ref-v_e)
+      }
+      pseudoInverse(J_translation, J_translation_pinv);
+      dq_command = J_translation_pinv * vc;
+      //  TODO should idx_1 be updated here or end of call?
+      idx_1 += 1;
+      if (false) {
+        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+          for (size_t i = 0; i < 42; ++i) {
+            PRIMITIVE_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
+          }
+          PRIMITIVE_publisher_.unlockAndPublish();
+        }
+        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+          for (size_t i = 0; i < 6; ++i) {
+            for (size_t j = 0; i < 7; ++j) {
+              PRIMITIVE_publisher_.msg_.jacobian[i] = jacobian(i, j);
+            }
+          }
+          PRIMITIVE_publisher_.unlockAndPublish();
+        }
+        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+          for (size_t i = 0; i < 3; ++i) {
+            for (size_t j = 0; j < 7; ++j) {
+              PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
+              PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] = J_translation_pinv(i, j);
+            }
+          }
+          PRIMITIVE_publisher_.unlockAndPublish();
+        }
+      }
+    }
+    if (false) {
+      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+        for (size_t i = 0; i < 3; ++i) {
+          PRIMITIVE_publisher_.msg_.r_star[i] = r_star[idx_1][i];
+          //      PRIMITIVE_publisher_.msg_.v_star[i] = v_star[idx_1][i];
+          PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
+        }
+        PRIMITIVE_publisher_.unlockAndPublish();
+      }
+    }
+    e_EE_target[0] = (r_star_tf[0] - EEposition(0));
+    e_EE_target[1] = (r_star_tf[1] - EEposition(1));
+    e_EE_target[2] = (r_star_tf[2] - EEposition(2));
+    // l2-norm
+    double accum = 0.;
+    for (int i = 0; i < 3; ++i) {
+      accum += e_EE_target[i] * e_EE_target[i];
+    }
+    double norm_e_EE_t = sqrt(accum);
+
+    //  TODO check
+    if (norm_e_EE_t < 0.001 and warm_up == true) {
+      std::cout << "Warm up ended!!!!!!!!!!" << " \n";
+      std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
       std::cout << "*******1-EEposition=\n";
       for (int i = 0; i < 3; i++) {
         std::cout << EEposition(i) << " ";
         std::cout << std::endl;
       }
-      std::cout << "*******3-q=\n" << q;
-      std::cout << std::endl;
-      std::cout << "dq=" << dq;
-      std::cout << std::endl;
-      std::cout << "@@@@@@@@@r_star[idx_1][0]=" << r_star[idx_1][0];
-      std::cout << std::endl;
-      std::cout << "e_t[0]=" << e_t[0];
-      std::cout << std::endl;
-      std::cout << "e_t[1]=" << e_t[1];
-      std::cout << std::endl;
-      std::cout << "e_t[2]=" << e_t[2];
-      std::cout << std::endl;
-      std::cout << "*******2-jacobian*dq=\n";
-      std::cout << jacobian * dq;
-      std::cout << std::endl;
-      std::cout << "jacobian=\n" << jacobian;
-      std::cout << std::endl;
-      std::cout << "*******4-J_translation=\n" << J_translation;
-      std::cout << std::endl;
-      std::cout << "J_translation_pinv=\n" << J_translation_pinv;
-      std::cout << std::endl;
-      std::cout << "vc=\n" << vc;
-      std::cout << std::endl;
-      std::cout << "dq_command=\n";
-      for (int i = 0; i < 7; i++) {
-        std::cout << dq_command(i) << std::endl;
+      std::cout << "k=" << k << " \n";
+      //    TODO this is not necessarily is going to lock
+      //    publish message to switch on the conveyor belt
+      if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
+        STEPPERMOTOR_publisher_.msg_.vector.x = 1;  // send command to stepper motor
+        STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
+        STEPPERMOTOR_publisher_.unlockAndPublish();
       }
-      std::cout << std::endl;
-    }
-    if (false) {
-      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-        for (size_t i = 0; i < 42; ++i) {
-          PRIMITIVE_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
-        }
-        PRIMITIVE_publisher_.unlockAndPublish();
-      }
-      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-        for (size_t i = 0; i < 6; ++i) {
-          for (size_t j = 0; i < 7; ++j) {
-            PRIMITIVE_publisher_.msg_.jacobian[i] = jacobian(i, j);
-          }
-        }
-        PRIMITIVE_publisher_.unlockAndPublish();
-      }
-      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-        for (size_t i = 0; i < 3; ++i) {
-          for (size_t j = 0; j < 7; ++j) {
-            PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
-            PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] = J_translation_pinv(i, j);
-          }
-        }
-        PRIMITIVE_publisher_.unlockAndPublish();
-      }
-    }
-  }
-  if (false) {
-    if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-      for (size_t i = 0; i < 3; ++i) {
-        PRIMITIVE_publisher_.msg_.r_star[i] = r_star[idx_1][i];
-        //      PRIMITIVE_publisher_.msg_.v_star[i] = v_star[idx_1][i];
-        PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
-      }
-      PRIMITIVE_publisher_.unlockAndPublish();
-    }
-  }
-  e_EE_target[0] = (r_star_tf[0] - EEposition(0));
-  e_EE_target[1] = (r_star_tf[1] - EEposition(1));
-  e_EE_target[2] = (r_star_tf[2] - EEposition(2));
-  // l2-norm
-  double accum = 0.;
-  for (int i = 0; i < 3; ++i) {
-    accum += e_EE_target[i] * e_EE_target[i];
-  }
-  double norm_e_EE_t = sqrt(accum);
-
-  //  TODO check
-  if (norm_e_EE_t < 0.001 and warm_up == true) {
-    if (false) {
-      std::cout << "=======================" << " \n";
-      std::cout << "v_star[0]=" << v_star[0] << " \n";
-      std::cout << "v_star[1]=" << v_star[1] << " \n";
-      std::cout << "v_star[2]=" << v_star[2] << " \n";
-      std::cout << "r_star_2[0]=" << r_star_2[0] << " \n";
-      std::cout << "r_star_2[1]=" << r_star_2[1] << " \n";
-      std::cout << "r_star_2[2]=" << r_star_2[2] << " \n";
-      std::cout << "r_star_tf[0]=" << r_star_tf[0] << " \n";
-      std::cout << "r_star_tf[1]=" << r_star_tf[1] << " \n";
-      std::cout << "r_star_tf[2]=" << r_star_tf[2] << " \n";
-      std::cout << "x_star(0)=" << x_star(0) << " \n";
-      std::cout << "y_star(0)=" << y_star(0) << " \n";
-      std::cout << "z_star(0)=" << z_star(0) << " \n";
-      std::cout << "x_star(Eigen::last)=" << x_star(Eigen::last) << " \n";
-      std::cout << "y_star(Eigen::last)=" << y_star(Eigen::last) << " \n";
-      std::cout << "z_star(Eigen::last)=" << z_star(Eigen::last) << " \n";
-      std::cout << "=======================" << " \n";
-    }
-    std::cout << "Warm up ended!!!!!!!!!!" << " \n";
-    std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
-    std::cout << "*******1-EEposition=\n";
-    for (int i = 0; i < 3; i++) {
-      std::cout << EEposition(i) << " ";
-      std::cout << std::endl;
-    }
-    std::cout << "k=" << k << " \n";
-    //    TODO this is not necessarily is going to lock
-    //    publish message to switch on the conveyor belt
-    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
-      STEPPERMOTOR_publisher_.msg_.vector.x = 1;
-      STEPPERMOTOR_publisher_.msg_.vector.y = 2025;
-      STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
-      STEPPERMOTOR_publisher_.unlockAndPublish();
-    }
-    //    TODO artificially wait at the begining: implement more efficient approach
-    artificial_wait_idx += 1;
-    if (artificial_wait_idx > 100) {
       warm_up = false;
-      //    TODO
-      k_KF = 0;
-      //  // TODO uncomment for offline demo
-      //      r_star_tf[0] = 511 / 1000;
-      //      r_star_tf[1] = 150 / 1000;
-      //      r_star_tf[2] = 101 / 1000;
-      //      r_star_tf[0] = p_hat_w(0)/1000;
-      //      r_star_tf[1] = p_hat_w(1)/1000;
-      //      r_star_tf[2] = p_hat_w(2)/1000;
-      //      r_star_tf[0] = x_star(Eigen::last);
-      //      r_star_tf[1] = y_star(Eigen::last);
-      //      r_star_tf[2] = z_star(Eigen::last);
-    }
-    //
-    //    for (size_t i = 0; i < 7; ++i) {
-    //      if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
-    //        std::cout << "-------i=" << i << "\n";
-    //        std::cout << "-------NOOOOOOOOOOOO=" << dq_command(i) << "\n";
-    //        std::cout << "-------norm_e_EE_t=" << norm_e_EE_t << "\n";
-    //        if (std::signbit(dq_command(i))) {
-    //          dq_command(i) = -dq_max[i];
-    //        } else {
-    //          dq_command(i) = +dq_max[i];
-    //        }
-    //      }
-    //      //      TODO do you need here to send command too?
-    //      velocity_joint_handles_[i].setCommand(dq_command(i));
-    //    }
-  } else if ((norm_e_EE_t < 0.03 and warm_up == false) or k_KF > 97) {
-    std::cout << "STOPPING!!!!!!!!!!!!!!!" << " \n";
-    std::cout << "k_KF=" << k_KF << " \n";
-    std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
-    std::cout << "*******1-EEposition=\n";
-    for (int i = 0; i < 3; i++) {
-      std::cout << EEposition(i) << " ";
-      std::cout << std::endl;
-    }
-    std::cout << "x_star(Eigen::last)=" << x_star(Eigen::last) << " \n";
-    std::cout << "y_star(Eigen::last)=" << y_star(Eigen::last) << " \n";
-    std::cout << "z_star(Eigen::last)=" << z_star(Eigen::last) << " \n";
-    std::cout << "k=" << k << " \n";
-    PRIMITIVEVelocityController::stopRequest(ros::Time::now());
-  } else {
-    std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
-    std::cout << "p_hat_w(0)=" << p_hat_w(0) << " \n";
-    std::cout << "p_hat_w(1)=" << p_hat_w(1) << " \n";
-    std::cout << "p_hat_w(2)=" << p_hat_w(2) << " \n";
-    std::cout << "EEposition(0)=" << EEposition(0) << " \n";
-    std::cout << "EEposition(1)=" << EEposition(1) << " \n";
-    std::cout << "EEposition(2)=" << EEposition(2) << " \n";
-    std::cout << "k=" << k << " \n";
-    std::cout << "k_KF=" << k_KF << " \n";
-
-    //    //    TODO is it efficient to poublish always like this?!
-    //    for (size_t i = 0; i < 10; ++i) {
-    //      //    publish message to switch on the conveyor belt
-    //      if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
-    //        STEPPERMOTOR_publisher_.msg_.vector.x = 1;
-    //        STEPPERMOTOR_publisher_.msg_.vector.y = 2025;
-    //        STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
-    //        STEPPERMOTOR_publisher_.unlockAndPublish();
-    //      }
-    //    }
-    //    //    TODO this is not necessarily is going to lock so I put here continuously to try to
-    //    send switch on command
-    //    //    publish message to switch on the conveyor belt
-    //    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
-    //      STEPPERMOTOR_publisher_.msg_.vector.x = 1;
-    //      STEPPERMOTOR_publisher_.msg_.vector.y = 2025;
-    //      STEPPERMOTOR_publisher_.msg_.header.stamp=ros::Time::now();
-    //      STEPPERMOTOR_publisher_.unlockAndPublish();
-    //    }
-    for (size_t i = 0; i < 7; ++i) {
-      if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
-        std::cout << "-------i=" << i << "\n";
-        std::cout << "-------NOOOOOOOOOOOO=" << dq_command(i) << "\n";
-        std::cout << "-------norm_e_EE_t=" << norm_e_EE_t << "\n";
-        if (std::signbit(dq_command(i))) {
-          dq_command(i) = -dq_max[i];
-        } else {
-          dq_command(i) = +dq_max[i];
-        }
+      // //    TODO artificially wait at the begining: implement more efficient approach
+      //      artificial_wait_idx += 1;
+      //      if (artificial_wait_idx > 100) {
+      //        warm_up = false;
+      //        //    TODO
+      //        k_KF = 0;
+      //        //  // TODO uncomment for offline demo
+      //        //      r_star_tf[0] = 511 / 1000;
+      //        //      r_star_tf[1] = 150 / 1000;
+      //        //      r_star_tf[2] = 101 / 1000;
+      //        //      r_star_tf[0] = p_hat_w(0)/1000;
+      //        //      r_star_tf[1] = p_hat_w(1)/1000;
+      //        //      r_star_tf[2] = p_hat_w(2)/1000;
+      //        //      r_star_tf[0] = x_star(Eigen::last);
+      //        //      r_star_tf[1] = y_star(Eigen::last);
+      //        //      r_star_tf[2] = z_star(Eigen::last);
+      //      }
+//      TODO improve conditions
+    } else if ((norm_e_EE_t < 0.01 and warm_up == false and k_KF>10)) {
+      std::cout << "STOPPING!!!!!!!!!!!!!!!" << " \n";
+      std::cout << "k_KF=" << k_KF << " \n";
+      std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
+      std::cout << "*******1-EEposition=\n";
+      for (int i = 0; i < 3; i++) {
+        std::cout << EEposition(i) << " ";
+        std::cout << std::endl;
       }
-      //      send control command
-      velocity_joint_handles_[i].setCommand(dq_command(i));
+      std::cout << "k=" << k << " \n";
+      PRIMITIVEVelocityController::stopRequest(ros::Time::now());
+    } else {
+      std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
+      std::cout << "p_hat_w(0)=" << p_hat_w(0) << " \n";
+      std::cout << "p_hat_w(1)=" << p_hat_w(1) << " \n";
+      std::cout << "p_hat_w(2)=" << p_hat_w(2) << " \n";
+      std::cout << "r_star_2(0)=" << r_star_2[0] << " \n";
+      std::cout << "r_star_2(1)=" << r_star_2[1] << " \n";
+      std::cout << "r_star_2(2)=" << r_star_2[2] << " \n";
+      std::cout << "EEposition(0)=" << EEposition(0) << " \n";
+      std::cout << "EEposition(1)=" << EEposition(1) << " \n";
+      std::cout << "EEposition(2)=" << EEposition(2) << " \n";
+      std::cout << "k=" << k << " \n";
+      std::cout << "k_KF=" << k_KF << " \n";
+
+      //    //    TODO is it efficient to poublish always like this?!
+      //    for (size_t i = 0; i < 10; ++i) {
+      //      //    publish message to switch on the conveyor belt
+      //      if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
+      //        STEPPERMOTOR_publisher_.msg_.vector.x = 1;
+      //        STEPPERMOTOR_publisher_.msg_.vector.y = 2025;
+      //        STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
+      //        STEPPERMOTOR_publisher_.unlockAndPublish();
+      //      }
+      //    }
+      //    //    TODO this is not necessarily is going to lock so I put here continuously to try to
+      //    send switch on command
+      //    //    publish message to switch on the conveyor belt
+      //    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
+      //      STEPPERMOTOR_publisher_.msg_.vector.x = 1;
+      //      STEPPERMOTOR_publisher_.msg_.vector.y = 2025;
+      //      STEPPERMOTOR_publisher_.msg_.header.stamp=ros::Time::now();
+      //      STEPPERMOTOR_publisher_.unlockAndPublish();
+      //    }
+      for (size_t i = 0; i < 7; ++i) {
+        if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
+          std::cout << "-------i=" << i << "\n";
+          std::cout << "-------NOOOOOOOOOOOO=" << dq_command(i) << "\n";
+          std::cout << "-------norm_e_EE_t=" << norm_e_EE_t << "\n";
+          if (std::signbit(dq_command(i))) {
+            dq_command(i) = -dq_max[i];
+          } else {
+            dq_command(i) = +dq_max[i];
+          }
+        }
+        //      send control command
+        velocity_joint_handles_[i].setCommand(dq_command(i));
+      }
     }
   }
   k += 1;
