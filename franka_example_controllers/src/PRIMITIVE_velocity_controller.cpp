@@ -196,12 +196,12 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     try {
       Commands curr_cmd = *(command_.readFromRT());
       //      TODO Pay attention
-      p_hat_w(0) = (curr_cmd.x + 21)/1000;
-      p_hat_w(1) = (curr_cmd.y + 25)/1000;
-      p_hat_w(2) = (curr_cmd.z + 54)/1000;
+      p_hat_w(0) = (curr_cmd.x + 21) / 1000;
+      p_hat_w(1) = (curr_cmd.y + 25) / 1000;
+      p_hat_w(2) = (curr_cmd.z + 54) / 1000;
       // TODO
       double t_measurement = curr_cmd.t_stamp_camera_measurement;
-      dt = (t_measurement - t_0)*1000; //[ms]
+      dt = (t_measurement - t_0) * 1000;  //[ms]
       t_0 = t_measurement;
     } catch (int N) {
       std::cout << "ERROR: CANNOT hear p_hat_w!" << "\n";
@@ -272,7 +272,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       }
     } else if (warm_up == false) {
       //  TODO how can you make KF conditions especially initially more efficient?
-      if (received_measurement == true and dt>0) {
+      if (received_measurement == true and dt > 0) {
         if (MODEL_0) {
           B(1) = dt;  //[ms]
           estimatesApriori = A * estimatesAposteriori + B * u;
@@ -389,16 +389,16 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
         r_star(0) = X_prediction_ahead(0);
         r_star(1) = X_prediction_ahead(1);
         r_star(2) = X_prediction_ahead(2);
-        v_star[0] = X_prediction_ahead(3)*1000;
-        v_star[1] = X_prediction_ahead(4)*1000;
-        v_star[2] = X_prediction_ahead(5)*1000;
+        v_star[0] = X_prediction_ahead(3) * 1000;
+        v_star[1] = X_prediction_ahead(4) * 1000;
+        v_star[2] = X_prediction_ahead(5) * 1000;
       }
       if (MODEL_2) {
         r_star(0) = X_prediction_ahead(0);
         r_star(1) = X_prediction_ahead(1);
         r_star(2) = X_prediction_ahead(2);
         v_star[0] = 0;
-        v_star[1] = u(0, 0)*1000; //[m/s]
+        v_star[1] = u(0, 0) * 1000;  //[m/s]
         v_star[2] = 0;
       }
     }
@@ -476,15 +476,19 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   double norm_e_EE_t = sqrt(accum);
   //  TODO check
   if (norm_e_EE_t < 0.001 and warm_up == true) {
-    std::cout << "==========Warm-up ended==========" << " \n";
-    std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
-    std::cout << "EEposition=\n";
+    if (false) {
+      std::cout << "==========Warm-up ended==========" << " \n";
+      std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
+      std::cout << "EEposition=\n";
+    }
     for (int i = 0; i < 3; i++) {
       std::cout << EEposition(i) << " ";
       std::cout << std::endl;
     }
-    std::cout << "k=" << k << " \n";
-    std::cout << "k_c=" << k_c << " \n";
+    if (false) {
+      std::cout << "k=" << k << " \n";
+      std::cout << "k_c=" << k_c << " \n";
+    }
     //    TODO this is not necessarily is going to lock
     //    publish message to switch on the conveyor belt
     if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
@@ -512,19 +516,21 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
     //      TODO improve conditions
   } else if ((norm_e_EE_t < 0.001 and warm_up == false)) {
-    std::cout << "++++++++++++++++TARGET REACHED, STOPPING+++++++++++++++" << " \n";
-    std::cout << "k_KF=" << k_KF << " \n";
-    std::cout << "k_c=" << k_c << " \n";
-    std::cout << "k=" << k << " \n";
-    std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
-    std::cout << "EEposition=\n";
+    if (false) {
+      std::cout << "++++++++++++++++TARGET REACHED, STOPPING+++++++++++++++" << " \n";
+      std::cout << "k_KF=" << k_KF << " \n";
+      std::cout << "k_c=" << k_c << " \n";
+      std::cout << "k=" << k << " \n";
+      std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
+      std::cout << "EEposition=\n";
+    }
     for (int i = 0; i < 3; i++) {
       std::cout << EEposition(i) << " ";
       std::cout << std::endl;
     }
     PRIMITIVEVelocityController::stopRequest(ros::Time::now());
   } else {
-    if (true) {
+    if (false) {
       std::cout << "==================================" << " \n";
       std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
       std::cout << "p_hat_w(0)=" << p_hat_w(0) << " \n";
