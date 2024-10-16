@@ -330,7 +330,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           std::mt19937 gen{rd()};
           std::normal_distribution<double> gauss_dist{u_mean, u_std};
           u(0, 0) = gauss_dist(gen);
-          cout << "u(0, 0)=" << u(0, 0) << endl;
+//          cout << "u(0, 0)=" << u(0, 0) << endl;
           B(1) = dt;  //[ms]
           estimatesApriori = A * estimatesAposteriori + B * u;
           covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
@@ -366,7 +366,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           std::mt19937 gen{rd()};
           std::normal_distribution<double> gauss_dist{u_mean, u_std};
           u(0, 0) = gauss_dist(gen);
-          cout << "u(0, 0)=" << u(0, 0) << endl;
+//          cout << "u(0, 0)=" << u(0, 0) << endl;
           B(1) = 1;  //[ms]
           X_prediction_ahead = A * X_prediction_ahead + B * u;
         }
@@ -408,6 +408,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     std::vector<int> ind_translational_jacobian{0, 1, 2};
     std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
     Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
+    //    if (k % 2000 == 0) {
+    //      cout << "+++J_translation=" << J_translation << "\n";
+    //    }
     Eigen::MatrixXd J_translation_pinv;
     e_t[0] = (r_star(0) - EEposition(0));
     e_t[1] = (r_star(1) - EEposition(1));
@@ -574,11 +577,13 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
-        std::cout << "------------At joint i=" << i << "\n";
-        std::cout << "JOINT LIMIT HIT!" << endl;
-        std::cout << "dq_command(i)" << dq_command(i) << "\n";
-        std::cout << "norm_e_EE_t=" << norm_e_EE_t << "\n";
-        std::cout << "k=" << k << "\n";
+        if (true) {
+          std::cout << "------------At joint i=" << i << "\n";
+          std::cout << "JOINT LIMIT HIT!" << endl;
+          std::cout << "dq_command(i)" << dq_command(i) << "\n";
+          std::cout << "norm_e_EE_t=" << norm_e_EE_t << "\n";
+          std::cout << "k=" << k << "\n";
+        }
         if (std::signbit(dq_command(i))) {
           dq_command(i) = -dq_max[i];
         } else {

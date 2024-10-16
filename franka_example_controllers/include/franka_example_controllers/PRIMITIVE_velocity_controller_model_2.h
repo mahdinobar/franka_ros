@@ -134,7 +134,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::Matrix<double, 3, 3> gainMatrices;
   int artificial_wait_idx = 0;
 
-  double K_p = 10;
-  double K_i = 10;
+  double K_p = 5;
+  double K_i = 0.5;
 };
 }  // namespace franka_example_controllers
