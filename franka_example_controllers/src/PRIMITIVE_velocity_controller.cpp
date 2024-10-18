@@ -473,7 +473,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     pseudoInverse(J_translation, J_translation_pinv);
     dq_command_PID = J_translation_pinv * vc;
 
-    if (k % 1000 == 0) {
+    if (k % 100 == 0) {
       torch::Tensor obs = torch::tensor({static_cast<float>(e_t.at(0)),
                                          static_cast<float>(e_t.at(1)),
                                          static_cast<float>(e_t.at(2)),
@@ -512,16 +512,13 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       auto output_tuple = output.toTuple();
       torch::Tensor output_tensor = output_tuple->elements()[0].toTensor();
       // Convert Tensor to Eigen matrix
-      Eigen::MatrixXd dq_SAC(output_tensor.size(0), output_tensor.size(1));
-      std::cout << "output_tensor.size(0)= " << output_tensor.size(0) << std::endl;
-      std::cout << "output_tensor.size(1)= " << output_tensor.size(1) << std::endl;
       std::memcpy(dq_SAC.data(), output_tensor.data_ptr<float>(),
                   output_tensor.numel() * sizeof(float));
-      std::cout << "!!!!!!!!!!!dq_SAC=";
-      for (int i = 0; i < 6; i++) {
-        std::cout << dq_SAC(i) << " ";
-      }
-      std::cout << "\n";
+//      std::cout << "!!!!!!!!!!!NEW dq_SAC=";
+//      for (int i = 0; i < 6; i++) {
+//        std::cout << dq_SAC(i) << " ";
+//      }
+//      std::cout << "\n";
     }
     //    dq_command = dq_command_PID + dq_SAC;
 

@@ -140,10 +140,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   int artificial_wait_idx = 0;
 
   torch::jit::script::Module actor;
-//  hardware_interface::PositionJointInterface* position_joint_interface_;
-//  std::vector<hardware_interface::JointHandle> position_joint_handles_;
-//  std::array<double, 6> q{};
-//  std::array<double, 6> dq{};
+  Eigen::Matrix<float, 1, 6> dq_SAC;
 
 
   double K_p = 5;
