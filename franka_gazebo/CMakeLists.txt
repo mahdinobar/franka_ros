@@ -11,7 +11,7 @@ if(${ARCHITECTURE} STREQUAL "armv7l")
 endif()
 
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Load catkin and all dependencies required for this package

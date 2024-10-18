@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.4)
 project(franka_example_controllers)
 
 set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(catkin REQUIRED COMPONENTS
@@ -24,9 +24,13 @@ find_package(catkin REQUIRED COMPONENTS
         urdf
         visualization_msgs
         std_msgs
+        class_loader
 )
 
 find_package(Eigen3 REQUIRED)
+#set(CMAKE_PREFIX_PATH "/home/mahdi/Downloads/libtorch")
+set(CMAKE_PREFIX_PATH "/home/mahdi/Downloads/libtorch-cxx11-abi-shared-with-deps-2.4.1+cpu/libtorch")
+find_package(Torch REQUIRED)
 find_package(Franka 0.9.0 QUIET)
 if (NOT Franka_FOUND)
     find_package(Franka 0.8.0 REQUIRED)
@@ -107,8 +111,20 @@ add_dependencies(franka_example_controllers
 target_link_libraries(franka_example_controllers PUBLIC
         ${Franka_LIBRARIES}
         ${catkin_LIBRARIES}
+        ${TORCH_LIBRARIES}
+        ${class_loader_LIBRARIES}
 )
+#target_link_libraries(franka_example_controllers PUBLIC
+#        ${Franka_LIBRARIES}
+#        ${catkin_LIBRARIES}
+#        ${class_loader_LIBRARIES}
+#)
 
+target_include_directories(franka_example_controllers SYSTEM PUBLIC
+        ${EIGEN3_INCLUDE_DIRS}
+        ${catkin_INCLUDE_DIRS}
+        ${TORCH_INCLUDE_DIRS}
+)
 target_include_directories(franka_example_controllers SYSTEM PUBLIC
         ${EIGEN3_INCLUDE_DIRS}
         ${catkin_INCLUDE_DIRS}
@@ -148,6 +164,13 @@ install(TARGETS franka_example_controllers
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+
+
+set_property(TARGET franka_example_controllers PROPERTY CXX_STANDARD 17)
+
+
+
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
@@ -192,3 +215,10 @@ if (PEP_TOOLS)
     file(GLOB_RECURSE PYSOURCES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/*.py)
     add_pyformat_target(franka_control FILES ${PYSOURCES})
 endif ()
+
+#set(CMAKE_PREFIX_PATH "/home/mahdi/Downloads/libtorch")
+#find_package(Torch REQUIRED)
+#include_directories(${TORCH_INCLUDE_DIRS})
+#add_executable(PRIMITIVE_velocity_controller /home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/src/PRIMITIVE_velocity_controller.cpp)  # Replace with your source file
+#target_link_libraries(PRIMITIVE_velocity_controller "${TORCH_LIBRARIES}")
+#set_property(TARGET PRIMITIVE_velocity_controller PROPERTY CXX_STANDARD 14)

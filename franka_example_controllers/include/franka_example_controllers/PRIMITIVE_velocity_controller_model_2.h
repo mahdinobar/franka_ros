@@ -26,6 +26,9 @@
 #include "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/src/KalmanFilter.cpp"
 #include "franka_example_controllers/KalmanFilter.h"
 
+#include <torch/script.h>
+#include <torch/torch.h>
+
 namespace franka_example_controllers {
 
 class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceController<
@@ -48,6 +51,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
  private:
   hardware_interface::VelocityJointInterface* velocity_joint_interface_;
   std::vector<hardware_interface::JointHandle> velocity_joint_handles_;
+
   std::unique_ptr<franka_hw::FrankaModelHandle> model_handle_;
   ros::Duration elapsed_time_;
   double t_0;
@@ -81,6 +85,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   float q_star[Target_Traj_ROWS][9];
   Eigen::Matrix<double, 3, 1> r_star_0 = {0.534, -0.2965, 0.1542};
   Eigen::Matrix<double, 3, 1> r_star = r_star_0;
+  Eigen::Matrix<double, 7, 1> dq_command_PID = {0, 0, 0, 0, 0, 0, 0};
   Eigen::Matrix<double, 7, 1> dq_command = {0, 0, 0, 0, 0, 0, 0};
   Eigen::Matrix<double, 3, 1> r_star_tf_warm_up = {0.534, -0.2465, 0.1542};
   Eigen::Matrix<double, 3, 1> r_star_tf = {0.534, +0.2285, 0.1542};
@@ -133,6 +138,13 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::Matrix<double, 3, 3> covarianceApriori;
   Eigen::Matrix<double, 3, 3> gainMatrices;
   int artificial_wait_idx = 0;
+
+  torch::jit::script::Module actor;
+//  hardware_interface::PositionJointInterface* position_joint_interface_;
+//  std::vector<hardware_interface::JointHandle> position_joint_handles_;
+//  std::array<double, 6> q{};
+//  std::array<double, 6> dq{};
+
 
   double K_p = 5;
   double K_i = 0.5;

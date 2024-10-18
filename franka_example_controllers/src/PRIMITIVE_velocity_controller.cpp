@@ -3,11 +3,11 @@
 #define MODEL_1 0  // or 0 if you want KF MODEL_1 to be false
 #define MODEL_2 1  // or 0 if you want KF MODEL_2 to be false
 #if MODEL_0
-#include <franka_example_controllers/PRIMITIVE_velocity_controller.h>
+#include </home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/include/franka_example_controllers/PRIMITIVE_velocity_controller.h>
 #elif MODEL_1
-#include <franka_example_controllers/PRIMITIVE_velocity_controller_model_1.h>
+#include </home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/include/franka_example_controllers/PRIMITIVE_velocity_controller_model_1.h>
 #elif MODEL_2
-#include <franka_example_controllers/PRIMITIVE_velocity_controller_model_2.h>
+#include </home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/include/franka_example_controllers/PRIMITIVE_velocity_controller_model_2.h>
 #endif
 
 #include <cmath>
@@ -33,6 +33,9 @@
 #include "geometry_msgs/Vector3.h"
 #include "geometry_msgs/Vector3Stamped.h"
 #include "std_msgs/Float64MultiArray.h"
+
+#include <torch/script.h>
+#include <torch/torch.h>
 
 namespace franka_example_controllers {
 Eigen::MatrixXd CSVopen(std::string fileToOpen) {
@@ -148,14 +151,57 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   sub_command_ =
       node_handle.subscribe("/p_hat_w", 100, &PRIMITIVEVelocityController::cmdVelCallback, this);
   ros::spinOnce();
+
+  //  position_joint_interface_ = robot_hardware->get<hardware_interface::PositionJointInterface>();
+  //  if (position_joint_interface_ == nullptr) {
+  //    ROS_ERROR(
+  //        "JointPositionExampleController: Error getting position joint interface from
+  //        hardware!");
+  //    return false;
+  //  }
+  //  position_joint_handles_.resize(7);
+  //  for (size_t i = 0; i < 7; ++i) {
+  //    try {
+  //      position_joint_handles_[i] = position_joint_interface_->getHandle(joint_names[i]);
+  //    } catch (const hardware_interface::HardwareInterfaceException& e) {
+  //      ROS_ERROR_STREAM(
+  //          "JointPositionExampleController: Exception getting joint handles: " << e.what());
+  //      return false;
+  //    }
+  // Load your serialized model --- SAC Actor Neural Network
+  actor = torch::jit::load(
+      "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/config/"
+      "traced_model_Cpp.pt");
+  std::cout << "+++++Actor model loaded successfully.+++++" << std::endl;
+  //  torch::Tensor input_tensor = torch::ones({1, 27});  // Example random tensor
+  //  // Wrap inputs in a vector of torch::jit::IValue
+  //  std::vector<torch::jit::IValue> inputs;
+  //  inputs.push_back(input_tensor);
+  //  // Run the model's forward pass
+  //  torch::jit::IValue output = actor.forward(inputs);
+  //  // Assuming the model returns two outputs as a tuple
+  //  auto outputs = output.toTuple();
+  //  // Extract the individual outputs from the tuple
+  //  torch::Tensor output_1 = outputs->elements()[0].toTensor();
+  //  // Print the outputs (or use them as needed)
+  //  std::cout << "Output 1: " << output_1 << std::endl;
+  //  auto sizes = output_1.sizes();
+  //  std::cout << "Output 1 values: " << std::endl;
+  //  if (output_1.dim() == 2) {
+  //    // For a 1D tensor
+  //    for (int i = 0; i < output_1.size(1); ++i) {
+  //      std::cout << output_1[0][i].item<float>() << " ";  // Assuming it's a float tensor
+  //    }
+  //  }
+
   return true;
 }
 
 void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
   t_0 = ros::Time::now().toSec();
-  ros::Time t_check = ros::Time::now();
-  cout << "t_0=" << t_0 << endl;
-  cout << "t_check=" << t_check << endl;
+  //  ros::Time t_check = ros::Time::now();
+  //  cout << "t_0=" << t_0 << endl;
+  //  cout << "t_check=" << t_check << endl;
   std::cout << "ros::Time::isSimTime()=" << ros::Time::isSimTime() << " \n";
   std::cout << std::endl;
   std::cout << "ros::Time::isSystemTime()=" << ros::Time::isSystemTime() << " \n";
@@ -175,10 +221,11 @@ void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
   //  std::string t_fileToOpen =
   //  "/home/mahdi/Documents/kalman/myCode/logs/measurements/t_model_1.csv"; x_star =
   //  CSVopen(x_fileToOpen) / 1000; y_star = CSVopen(y_fileToOpen) / 1000; z_star =
-  //  CSVopen(z_fileToOpen) / 1000; t_star = CSVopen(t_fileToOpen); std::cout << "x_star=" << x_star
+  //  CSVopen(z_fileToOpen) / 1000; t_star = CSVopen(t_fileToOpen); std::cout << "x_star=" <<
+  //  x_star
   //  <<"\n"; std::cout << "y_star(0)=" << y_star(0) << "\n"; std::cout << "y_star(last)=" <<
-  //  y_star(Eigen::last) << "\n"; std::cout << "y_star(1000)=" << y_star(1000) <<"\n"; std::cout <<
-  //  "z_star=" << z_star <<"\n"; std::cout << "t_star=" << t_star <<"\n";
+  //  y_star(Eigen::last) << "\n"; std::cout << "y_star(1000)=" << y_star(1000) <<"\n"; std::cout
+  //  << "z_star=" << z_star <<"\n"; std::cout << "t_star=" << t_star <<"\n";
   // l2-norm
   double accum = 0.;
   for (int i = 0; i < 3; ++i) {
@@ -217,6 +264,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   Eigen::Vector3d EEposition(transform.translation());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
+  Eigen::Map<const Eigen::Matrix<double, 7, 1>> tau_J(robot_state.tau_J.data());
   //  UNCOMMENT for ROS camera camera (non) real-time communications
   //  if (k % (ms * 100) == 0) {
   //    try {
@@ -330,7 +378,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           std::mt19937 gen{rd()};
           std::normal_distribution<double> gauss_dist{u_mean, u_std};
           u(0, 0) = gauss_dist(gen);
-//          cout << "u(0, 0)=" << u(0, 0) << endl;
+          //          cout << "u(0, 0)=" << u(0, 0) << endl;
           B(1) = dt;  //[ms]
           estimatesApriori = A * estimatesAposteriori + B * u;
           covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
@@ -366,7 +414,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           std::mt19937 gen{rd()};
           std::normal_distribution<double> gauss_dist{u_mean, u_std};
           u(0, 0) = gauss_dist(gen);
-//          cout << "u(0, 0)=" << u(0, 0) << endl;
+          //          cout << "u(0, 0)=" << u(0, 0) << endl;
           B(1) = 1;  //[ms]
           X_prediction_ahead = A * X_prediction_ahead + B * u;
         }
@@ -412,18 +460,72 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //      cout << "+++J_translation=" << J_translation << "\n";
     //    }
     Eigen::MatrixXd J_translation_pinv;
-    e_t[0] = (r_star(0) - EEposition(0));
-    e_t[1] = (r_star(1) - EEposition(1));
-    e_t[2] = (r_star(2) - EEposition(2));
+    e_t[0] = (-r_star(0) + EEposition(0));
+    e_t[1] = (-r_star(1) + EEposition(1));
+    e_t[2] = (-r_star(2) + EEposition(2));
     Eigen::Vector<double, 3> vc;
     for (int i = 0; i < 3; ++i) {
       // ATTENTION to dimenstion
-      I_e[i] += e_t[i] * dti1;  // in [m/s] because jacobian is in m to rad and dq are in rad/sec
-      vc(i) = v_star[i] + K_p * e_t[i] +
+      I_e[i] += -e_t[i] * dti1;  // in [m/s] because jacobian is in m to rad and dq are in rad/sec
+      vc(i) = v_star[i] + K_p * (-e_t[i]) +
               K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*dti1 + K_d*(v_ref-v_e)
     }
     pseudoInverse(J_translation, J_translation_pinv);
-    dq_command = J_translation_pinv * vc;
+    dq_command_PID = J_translation_pinv * vc;
+
+    if (k % 1000 == 0) {
+      torch::Tensor obs = torch::tensor({static_cast<float>(e_t.at(0)),
+                                         static_cast<float>(e_t.at(1)),
+                                         static_cast<float>(e_t.at(2)),
+                                         static_cast<float>(q(0)),
+                                         static_cast<float>(q(1)),
+                                         static_cast<float>(q(2)),
+                                         static_cast<float>(q(3)),
+                                         static_cast<float>(q(4)),
+                                         static_cast<float>(q(5)),
+                                         static_cast<float>(dq(0)),
+                                         static_cast<float>(dq(1)),
+                                         static_cast<float>(dq(2)),
+                                         static_cast<float>(dq(3)),
+                                         static_cast<float>(dq(4)),
+                                         static_cast<float>(dq(5)),
+                                         static_cast<float>(tau_J(0)),
+                                         static_cast<float>(tau_J(1)),
+                                         static_cast<float>(tau_J(2)),
+                                         static_cast<float>(tau_J(3)),
+                                         static_cast<float>(tau_J(4)),
+                                         static_cast<float>(tau_J(5)),
+                                         static_cast<float>(dq_command_PID(0)),
+                                         static_cast<float>(dq_command_PID(1)),
+                                         static_cast<float>(dq_command_PID(2)),
+                                         static_cast<float>(dq_command_PID(3)),
+                                         static_cast<float>(dq_command_PID(4)),
+                                         static_cast<float>(dq_command_PID(5))},
+                                        torch::kFloat32)
+                              .reshape({1, 27});
+      // Wrap inputs in a vector of torch::jit::IValue
+      std::vector<torch::jit::IValue> observations;
+      observations.push_back(obs);
+      // Run the model's forward pass
+      torch::jit::IValue output = actor.forward(observations);
+      // Extract tensors from the output tuple
+      auto output_tuple = output.toTuple();
+      torch::Tensor output_tensor = output_tuple->elements()[0].toTensor();
+      // Convert Tensor to Eigen matrix
+      Eigen::MatrixXd dq_SAC(output_tensor.size(0), output_tensor.size(1));
+      std::cout << "output_tensor.size(0)= " << output_tensor.size(0) << std::endl;
+      std::cout << "output_tensor.size(1)= " << output_tensor.size(1) << std::endl;
+      std::memcpy(dq_SAC.data(), output_tensor.data_ptr<float>(),
+                  output_tensor.numel() * sizeof(float));
+      std::cout << "!!!!!!!!!!!dq_SAC=";
+      for (int i = 0; i < 6; i++) {
+        std::cout << dq_SAC(i) << " ";
+      }
+      std::cout << "\n";
+    }
+    //    dq_command = dq_command_PID + dq_SAC;
+
+    dq_command = dq_command_PID;
     //  TODO should k_c be updated here or end of call?
     k_c += 1;
     if (false) {
@@ -590,7 +692,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           dq_command(i) = +dq_max[i];
         }
       }
-      //      send control command
+      //              send control command
       velocity_joint_handles_[i].setCommand(dq_command(i));
     }
   }
