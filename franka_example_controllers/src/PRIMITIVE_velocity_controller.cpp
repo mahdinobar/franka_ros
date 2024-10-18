@@ -514,14 +514,15 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       // Convert Tensor to Eigen matrix
       std::memcpy(dq_SAC.data(), output_tensor.data_ptr<float>(),
                   output_tensor.numel() * sizeof(float));
-//      std::cout << "!!!!!!!!!!!NEW dq_SAC=";
-//      for (int i = 0; i < 6; i++) {
-//        std::cout << dq_SAC(i) << " ";
-//      }
-//      std::cout << "\n";
+      if (false) {
+        std::cout << "!!!!!!!!!!!NEW dq_SAC=";
+        for (int i = 0; i < 6; i++) {
+          std::cout << dq_SAC(i) << " ";
+        }
+        std::cout << "\n";
+      }
     }
     //    dq_command = dq_command_PID + dq_SAC;
-
     dq_command = dq_command_PID;
     //  TODO should k_c be updated here or end of call?
     k_c += 1;
@@ -583,9 +584,11 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
       std::cout << "EEposition=\n";
     }
-    for (int i = 0; i < 3; i++) {
-      std::cout << EEposition(i) << " ";
-      std::cout << std::endl;
+    if (false) {
+      for (int i = 0; i < 3; i++) {
+        std::cout << EEposition(i) << " ";
+        std::cout << std::endl;
+      }
     }
     if (false) {
       std::cout << "k=" << k << " \n";
@@ -601,7 +604,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    TODO artificially wait to be sure the command published for the stepper motor trigger
     //    TODO implement more efficient solution
     artificial_wait_idx += 1;
-    if (artificial_wait_idx > 10) {  // 3 ms artificial delay
+    if (artificial_wait_idx > 10) {  // 10 ms artificial delay
       std::cout << "waiting!, artificial_wait_idx=" << artificial_wait_idx << " \n";
       warm_up = false;
       //    TODO
