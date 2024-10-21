@@ -467,7 +467,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     pseudoInverse(J_translation, J_translation_pinv);
     dq_command_PID = J_translation_pinv * vc;
 
-    if (k % 20 == 0 and start_up == false) {
+    if (k % 100 == 0 and start_up == false) {
       torch::Tensor obs = torch::tensor({static_cast<float>(e_t.at(0)),
                                          static_cast<float>(e_t.at(1)),
                                          static_cast<float>(e_t.at(2)),
@@ -587,7 +587,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    TODO artificially wait to be sure the command published for the stepper motor trigger
     //    TODO implement more efficient solution
     artificial_wait_idx += 1;
-    if (artificial_wait_idx > 5) {  // 5 ms artificial delay
+    if (artificial_wait_idx > 10) {  // 10 ms artificial delay
       std::cout << "waiting!, artificial_wait_idx=" << artificial_wait_idx << " \n";
       start_up = false;
       // TODO ATTENTION: initialize KF at initial position
@@ -690,8 +690,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    dq_command_float = dq_command.cast<float>();
     for (size_t i = 0; i < 7; ++i) {
       // inner loop 1: k=1ms (1000 Hz)
-      PRIMITIVE_publisher_.msg_.dq_command[i] = dq_command(i);
-      PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
+//      PRIMITIVE_publisher_.msg_.dq_command[i] = dq_command(i);
+//      PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
       PRIMITIVE_publisher_.msg_.dq_command_PID[i] = dq_command_PID(i);
       if (i < 6) {
         PRIMITIVE_publisher_.msg_.dq_SAC[i] = dq_SAC(i);
