@@ -109,7 +109,6 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::MatrixXd t_star;
   double norm_v_star_dir;
   bool start_up = true;
-  int k_KF = 0;
   // TODO bring into starting?
   Eigen::Matrix<double, 3, 3> A{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
   Eigen::Matrix<double, 3, 1> B{{0}, {1}, {0}};
@@ -140,7 +139,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   int artificial_wait_idx = 0;
 
   torch::jit::script::Module actor;
-  Eigen::Matrix<float, 1, 6> dq_SAC;
+  Eigen::Matrix<float, 1, 6> dq_SAC {0, 0, 0, 0, 0, 0};
 //  Eigen::Matrix<float, 7, 1> dq_command_float;
 
 

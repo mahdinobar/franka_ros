@@ -330,13 +330,15 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           Sk = Sk.inverse();
           gainMatrices = covarianceApriori * (C.transpose()) * Sk;
           estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
-          cout << "&&&&&&&&&&&&&&&&&&&&&&&&" << estimatesApriori << endl;
-          cout << "estimatesApriori=" << estimatesApriori << endl;
-          cout << "gainMatrices=" << gainMatrices << endl;
-          cout << "p_hat_w=" << p_hat_w << endl;
-          cout << "C=" << C << endl;
-          cout << "estimatesApriori=" << estimatesApriori << endl;
-          cout << "estimatesAposteriori=" << estimatesAposteriori << endl;
+          if (false) {
+            cout << "&&&&&&&&&&&&&&&&&&&&&&&&" << estimatesApriori << endl;
+            cout << "estimatesApriori=" << estimatesApriori << endl;
+            cout << "gainMatrices=" << gainMatrices << endl;
+            cout << "p_hat_w=" << p_hat_w << endl;
+            cout << "C=" << C << endl;
+            cout << "estimatesApriori=" << estimatesApriori << endl;
+            cout << "estimatesAposteriori=" << estimatesAposteriori << endl;
+          }
           Eigen::MatrixXd In;
           In = Eigen::MatrixXd::Identity(3, 3);
           Eigen::MatrixXd IminusKC;
@@ -346,7 +348,6 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
                                   gainMatrices * R * (gainMatrices.transpose());
           X_prediction_ahead = estimatesAposteriori;
           received_measurement = false;
-          k_KF += 1;
         }
         if (MODEL_1) {
           A(0, 3) = dt;  //[ms]
@@ -368,7 +369,6 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
                                   gainMatrices * R * (gainMatrices.transpose());
           X_prediction_ahead = estimatesAposteriori;
           received_measurement = false;
-          k_KF += 1;
         }
         if (MODEL_2) {
           //          std::random_device rd{};
@@ -396,17 +396,16 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
                                   gainMatrices * R * (gainMatrices.transpose());
           X_prediction_ahead = estimatesAposteriori;
           received_measurement = false;
-          k_KF += 1;
         }
       } else {
         if (MODEL_0) {
-          B(1) = 1;  //[ms]
+          B(1) = 1 * ms;  //[ms]
           X_prediction_ahead = A * X_prediction_ahead + B * u;
         }
         if (MODEL_1) {
-          A(0, 3) = 1;  //[ms]
-          A(1, 4) = 1;  //[ms]
-          A(2, 5) = 1;  //[ms]
+          A(0, 3) = 1 * ms;  //[ms]
+          A(1, 4) = 1 * ms;  //[ms]
+          A(2, 5) = 1 * ms;  //[ms]
           X_prediction_ahead = A * X_prediction_ahead + B * u;
         }
         if (MODEL_2) {
@@ -415,7 +414,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           std::normal_distribution<double> gauss_dist{u_mean, u_std};
           u(0, 0) = gauss_dist(gen);
           //          cout << "u(0, 0)=" << u(0, 0) << endl;
-          B(1) = 1;  //[ms]
+          B(1) = 1 * ms;  //[ms] //TODO ATTENTION
           X_prediction_ahead = A * X_prediction_ahead + B * u;
         }
       }
@@ -424,11 +423,6 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
         // ATTENTION to dimension
         v_star[1] = 0.0341;  //[m/s]
         v_star[2] = 0;
-        //      offline just demo KF
-        //      r_star[0] = x_star(k_KF);
-        //      r_star[1] = y_star(k_KF);
-        //      r_star[2] = z_star(k_KF);
-        //      k_KF += 1;
         r_star(0) = X_prediction_ahead(0);
         r_star(1) = X_prediction_ahead(1);
         r_star(2) = X_prediction_ahead(2);
@@ -473,7 +467,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     pseudoInverse(J_translation, J_translation_pinv);
     dq_command_PID = J_translation_pinv * vc;
 
-    if (k % 20 == 0) {
+    if (k % 20 == 0 and start_up == false) {
       torch::Tensor obs = torch::tensor({static_cast<float>(e_t.at(0)),
                                          static_cast<float>(e_t.at(1)),
                                          static_cast<float>(e_t.at(2)),
@@ -524,7 +518,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
     //    dq_command = dq_command_PID;
     //  TODO should k_c be updated here or end of call?
-    k_c += 1;
+    k_c += 1;  // k_c is used for the start_up phase speed profile only
     if (false) {
       if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
         for (size_t i = 0; i < 42; ++i) {
@@ -555,7 +549,6 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     e_EE_target[0] = (r_star_tf_warm_up(0) - EEposition(0));
     e_EE_target[1] = (r_star_tf_warm_up(1) - EEposition(1));
     e_EE_target[2] = (r_star_tf_warm_up(2) - EEposition(2));
-    dq_SAC = {0, 0, 0, 0, 0, 0};
   } else if (start_up == false) {
     e_EE_target[0] = (r_star_tf(0) - EEposition(0));
     e_EE_target[1] = (r_star_tf(1) - EEposition(1));
@@ -567,7 +560,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     accum += e_EE_target[i] * e_EE_target[i];
   }
   double norm_e_EE_t = sqrt(accum);
-  //  TODO check
+  //  end startup phase if you reach below 1 mm distance to initial condition
   if (norm_e_EE_t < 0.001 and start_up == true) {
     if (false) {
       std::cout << "==========Warm-up ended==========" << " \n";
@@ -594,7 +587,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    TODO artificially wait to be sure the command published for the stepper motor trigger
     //    TODO implement more efficient solution
     artificial_wait_idx += 1;
-    if (artificial_wait_idx > 10) {  // 3 ms artificial delay
+    if (artificial_wait_idx > 10) {  // 10 ms artificial delay
       std::cout << "waiting!, artificial_wait_idx=" << artificial_wait_idx << " \n";
       start_up = false;
       //    TODO
@@ -609,16 +602,17 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       //      r_star_tf_warm_up[1] = y_star(Eigen::last);
       //      r_star_tf_warm_up[2] = z_star(Eigen::last);
     }
-    //      TODO improve conditions
-  } else if ((norm_e_EE_t < 0.001 and start_up == false)) {
+    //  stop condition at end of tracking
+  } else if ((norm_e_EE_t < 0.003 and start_up == false)) {
     if (false) {
       std::cout << "++++++++++++++++TARGET REACHED, STOPPING+++++++++++++++" << " \n";
-      std::cout << "k_KF=" << k_KF << " \n";
       std::cout << "k_c=" << k_c << " \n";
       std::cout << "k=" << k << " \n";
       std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
       std::cout << "EEposition=\n";
     }
+    std::cout << "Reached near the final position: stopping!" << endl;
+    std::cout << "EEposition=" << endl;
     for (int i = 0; i < 3; i++) {
       std::cout << EEposition(i) << " ";
       std::cout << std::endl;
@@ -645,7 +639,6 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       std::cout << "x0(2)=" << x0(2) << " \n";
       std::cout << "dt=" << dt << " \n";
       std::cout << "k=" << k << " \n";
-      std::cout << "k_KF=" << k_KF << " \n";
     }
 
     //    //    TODO is it efficient to poublish always like this?!
@@ -669,6 +662,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
       dq_command(i) = dq_command_PID(i) + dq_SAC(i);
+      // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         if (true) {
           std::cout << "------------At joint i=" << i << "\n";
@@ -688,9 +682,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
   }
   k += 1;
-  //  TODO can this publish be moved just after command?
+  //  TODO can this publish be moved just after command? or more efficiently publish?
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-//    dq_command_float = dq_command.cast<float>();
+    //    dq_command_float = dq_command.cast<float>();
     for (size_t i = 0; i < 7; ++i) {
       // inner loop 1: k=1ms (1000 Hz)
       PRIMITIVE_publisher_.msg_.dq_command[i] = dq_command(i);
@@ -699,7 +693,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       if (i < 6) {
         PRIMITIVE_publisher_.msg_.dq_SAC[i] = dq_SAC(i);
       }
-      if (i<3){
+      if (i < 3) {
         PRIMITIVE_publisher_.msg_.r_star[i] = r_star(i);
       }
     }
