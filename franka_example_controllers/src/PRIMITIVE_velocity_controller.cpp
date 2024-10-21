@@ -310,15 +310,15 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //    }
   //  }
   if (k % ms == 0) {
-    //     TODO smooth warm_up speed profile
+    //     TODO smooth start_up speed profile
     double v_star_dir_length = 34.9028 / (1 + std::exp(-0.04 * (k_c - 250))) / 1000 -
                                34.9028 / (1 + std::exp(-0.04 * (0 - 250))) / 1000;
-    if (warm_up == true) {
+    if (start_up == true) {
       for (int i = 0; i < 3; ++i) {
         v_star[i] = v_star_dir[i] / norm_v_star_dir * v_star_dir_length;
         r_star(i) = dti1 * v_star[i] + r_star(i);
       }
-    } else if (warm_up == false) {
+    } else if (start_up == false) {
       //  TODO how can you make KF conditions especially initially more efficient?
       if (received_measurement == true and dt > 0) {
         if (MODEL_0) {
@@ -473,7 +473,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     pseudoInverse(J_translation, J_translation_pinv);
     dq_command_PID = J_translation_pinv * vc;
 
-    if (k % 100 == 0) {
+    if (k % 20 == 0) {
       torch::Tensor obs = torch::tensor({static_cast<float>(e_t.at(0)),
                                          static_cast<float>(e_t.at(1)),
                                          static_cast<float>(e_t.at(2)),
@@ -522,8 +522,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
         std::cout << "\n";
       }
     }
-    //    dq_command = dq_command_PID + dq_SAC;
-    dq_command = dq_command_PID;
+    //    dq_command = dq_command_PID;
     //  TODO should k_c be updated here or end of call?
     k_c += 1;
     if (false) {
@@ -552,21 +551,12 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       }
     }
   }
-  if (false) {
-    //      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-    //        for (size_t i = 0; i < 3; ++i) {
-    //          PRIMITIVE_publisher_.msg_.r_star[i] = r_star[k_c][i];
-    //          //      PRIMITIVE_publisher_.msg_.v_star[i] = v_star[k_c][i];
-    //          PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
-    //        }
-    //        PRIMITIVE_publisher_.unlockAndPublish();
-    //      }
-  }
-  if (warm_up == true) {
+  if (start_up == true) {
     e_EE_target[0] = (r_star_tf_warm_up(0) - EEposition(0));
     e_EE_target[1] = (r_star_tf_warm_up(1) - EEposition(1));
     e_EE_target[2] = (r_star_tf_warm_up(2) - EEposition(2));
-  } else if (warm_up == false) {
+    dq_SAC = {0, 0, 0, 0, 0, 0};
+  } else if (start_up == false) {
     e_EE_target[0] = (r_star_tf(0) - EEposition(0));
     e_EE_target[1] = (r_star_tf(1) - EEposition(1));
     e_EE_target[2] = (r_star_tf(2) - EEposition(2));
@@ -578,7 +568,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   }
   double norm_e_EE_t = sqrt(accum);
   //  TODO check
-  if (norm_e_EE_t < 0.001 and warm_up == true) {
+  if (norm_e_EE_t < 0.001 and start_up == true) {
     if (false) {
       std::cout << "==========Warm-up ended==========" << " \n";
       std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
@@ -604,9 +594,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    TODO artificially wait to be sure the command published for the stepper motor trigger
     //    TODO implement more efficient solution
     artificial_wait_idx += 1;
-    if (artificial_wait_idx > 10) {  // 10 ms artificial delay
+    if (artificial_wait_idx > 10) {  // 3 ms artificial delay
       std::cout << "waiting!, artificial_wait_idx=" << artificial_wait_idx << " \n";
-      warm_up = false;
+      start_up = false;
       //    TODO
       //  // TODO uncomment for offline demo
       //      r_star_tf_warm_up[0] = 511 / 1000;
@@ -620,7 +610,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       //      r_star_tf_warm_up[2] = z_star(Eigen::last);
     }
     //      TODO improve conditions
-  } else if ((norm_e_EE_t < 0.001 and warm_up == false)) {
+  } else if ((norm_e_EE_t < 0.001 and start_up == false)) {
     if (false) {
       std::cout << "++++++++++++++++TARGET REACHED, STOPPING+++++++++++++++" << " \n";
       std::cout << "k_KF=" << k_KF << " \n";
@@ -678,6 +668,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    }
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
+      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         if (true) {
           std::cout << "------------At joint i=" << i << "\n";
@@ -699,9 +690,18 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   k += 1;
   //  TODO can this publish be moved just after command?
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+//    dq_command_float = dq_command.cast<float>();
     for (size_t i = 0; i < 7; ++i) {
       // inner loop 1: k=1ms (1000 Hz)
-      PRIMITIVE_publisher_.msg_.dq_c[i] = dq_command(i);
+      PRIMITIVE_publisher_.msg_.dq_command[i] = dq_command(i);
+      PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
+      PRIMITIVE_publisher_.msg_.dq_command_PID[i] = dq_command_PID(i);
+      if (i < 6) {
+        PRIMITIVE_publisher_.msg_.dq_SAC[i] = dq_SAC(i);
+      }
+      if (i<3){
+        PRIMITIVE_publisher_.msg_.r_star[i] = r_star(i);
+      }
     }
     PRIMITIVE_publisher_.unlockAndPublish();
   }
