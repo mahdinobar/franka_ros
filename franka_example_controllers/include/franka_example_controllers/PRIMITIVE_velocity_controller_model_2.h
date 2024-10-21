@@ -121,7 +121,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   // covariance matrix of the state disturbance
   Eigen::Matrix<double, 3, 3> Q{{1, 0, 0}, {0, 4, 0}, {0, 0, 1}};
   // guess of the initial state estimate
-  Eigen::Matrix<double, 3, 1> x0 = r_star_tf_warm_up;
+  //  Eigen::Matrix<double, 3, 1> x0 = r_star_tf_warm_up;
   // ATTENTION to dimension
   Eigen::Matrix<double, 1, 1> u;  //[m/ms]
   double u_mean = 0.0341e-3;      //[m/ms]
@@ -130,8 +130,10 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   unsigned int maxDataSamples_KF = 2;
   bool received_measurement = false;
   double dt = 0;
-  Eigen::Matrix<double, 3, 1> X_prediction_ahead = x0;
-  Eigen::Matrix<double, 3, 1> estimatesAposteriori = x0;
+  //  Eigen::Matrix<double, 3, 1> X_prediction_ahead = x0;
+  //  Eigen::Matrix<double, 3, 1> estimatesAposteriori = x0;
+  Eigen::Matrix<double, 3, 1> X_prediction_ahead;
+  Eigen::Matrix<double, 3, 1> estimatesAposteriori;
   Eigen::Matrix<double, 3, 1> estimatesApriori;
   Eigen::Matrix<double, 3, 3> covarianceAposteriori = P0;
   Eigen::Matrix<double, 3, 3> covarianceApriori;
@@ -139,9 +141,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   int artificial_wait_idx = 0;
 
   torch::jit::script::Module actor;
-  Eigen::Matrix<float, 1, 6> dq_SAC {0, 0, 0, 0, 0, 0};
-//  Eigen::Matrix<float, 7, 1> dq_command_float;
-
+  Eigen::Matrix<float, 1, 6> dq_SAC{0, 0, 0, 0, 0, 0};
+  //  Eigen::Matrix<float, 7, 1> dq_command_float;
 
   double K_p = 5;
   double K_i = 0.5;

@@ -587,9 +587,12 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    TODO artificially wait to be sure the command published for the stepper motor trigger
     //    TODO implement more efficient solution
     artificial_wait_idx += 1;
-    if (artificial_wait_idx > 10) {  // 10 ms artificial delay
+    if (artificial_wait_idx > 5) {  // 5 ms artificial delay
       std::cout << "waiting!, artificial_wait_idx=" << artificial_wait_idx << " \n";
       start_up = false;
+      // TODO ATTENTION: initialize KF at initial position
+      X_prediction_ahead = EEposition;
+      estimatesAposteriori = EEposition;
       //    TODO
       //  // TODO uncomment for offline demo
       //      r_star_tf_warm_up[0] = 511 / 1000;
