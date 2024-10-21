@@ -637,9 +637,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       std::cout << "X_prediction_ahead(0)=" << X_prediction_ahead(0) << " \n";
       std::cout << "X_prediction_ahead(1)=" << X_prediction_ahead(1) << " \n";
       std::cout << "X_prediction_ahead(2)=" << X_prediction_ahead(2) << " \n";
-      std::cout << "x0(0)=" << x0(0) << " \n";
-      std::cout << "x0(1)=" << x0(1) << " \n";
-      std::cout << "x0(2)=" << x0(2) << " \n";
+//      std::cout << "x0(0)=" << x0(0) << " \n";
+//      std::cout << "x0(1)=" << x0(1) << " \n";
+//      std::cout << "x0(2)=" << x0(2) << " \n";
       std::cout << "dt=" << dt << " \n";
       std::cout << "k=" << k << " \n";
     }
