@@ -37,5 +37,15 @@ joint_pose:
   $(arg arm_id)_joint5: -0.1389382115601044
   $(arg arm_id)_joint6: 2.4397471245148825
   $(arg arm_id)_joint7: 0.8195687449770361
+##joint poses corrospond to r_star_tf_ftc2 = {0.486437, -0.271439, 0.217004}; manually measured upper left apriltag corner with tolerance 1 mm by my PI controller
+#joint_pose:
+#  $(arg arm_id)_joint1: -0.38198187
+#  $(arg arm_id)_joint2: 1.32720032
+#  $(arg arm_id)_joint3: -0.17534288
+#  $(arg arm_id)_joint4: -0.3604967
+#  $(arg arm_id)_joint5: -0.16008594
+#  $(arg arm_id)_joint6:  0.4936846
+#  $(arg arm_id)_joint7:  0.8195687449770361
+
 
 

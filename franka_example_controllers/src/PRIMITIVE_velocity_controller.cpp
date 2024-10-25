@@ -9,7 +9,7 @@
 #elif MODEL_2
 #include </home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/include/franka_example_controllers/PRIMITIVE_velocity_controller_model_2.h>
 #endif
-
+#include <chrono>
 #include <cmath>
 
 #include <controller_interface/controller_base.h>
@@ -171,7 +171,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   // Load your serialized model --- SAC Actor Neural Network
   actor = torch::jit::load(
       "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/config/"
-      "traced_model_Cpp.pt");
+      "traced_model_Cpp_Fep_HW_101_double.pt");
   std::cout << "+++++Actor model loaded successfully.+++++" << std::endl;
   //  torch::Tensor input_tensor = torch::ones({1, 27});  // Example random tensor
   //  // Wrap inputs in a vector of torch::jit::IValue
@@ -229,10 +229,16 @@ void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
   // l2-norm
   double accum = 0.;
   for (int i = 0; i < 3; ++i) {
-    v_star_dir[i] = (r_star_tf_warm_up(i) - r_star_0(i));
+    v_star_dir[i] = (r_star_tf_start_up(i) - r_star_0(i));
     accum += v_star_dir[i] * v_star_dir[i];
   }
   norm_v_star_dir = sqrt(accum);
+
+  // Perform warm-up passes
+  for (int i = 0; i < 10; ++i) {
+    torch::jit::IValue warmup_output = actor.forward(observations);
+    warmup_output.toTuple()->elements()[0].toTensor();
+  }
 }
 
 void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Duration& period) {
@@ -244,7 +250,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       Commands curr_cmd = *(command_.readFromRT());
       //      TODO Pay attention
       p_hat_w(0) = (curr_cmd.x + 21) / 1000;
-      p_hat_w(1) = (curr_cmd.y + 25) / 1000;
+      p_hat_w(1) = (curr_cmd.y + 25 + 1.8) / 1000;
       p_hat_w(2) = (curr_cmd.z + 54) / 1000;
       // TODO
       double t_measurement = curr_cmd.t_stamp_camera_measurement;
@@ -467,56 +473,6 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     pseudoInverse(J_translation, J_translation_pinv);
     dq_command_PID = J_translation_pinv * vc;
 
-    if (k % 100 == 0 and start_up == false) {
-      torch::Tensor obs = torch::tensor({static_cast<float>(e_t.at(0)),
-                                         static_cast<float>(e_t.at(1)),
-                                         static_cast<float>(e_t.at(2)),
-                                         static_cast<float>(q(0)),
-                                         static_cast<float>(q(1)),
-                                         static_cast<float>(q(2)),
-                                         static_cast<float>(q(3)),
-                                         static_cast<float>(q(4)),
-                                         static_cast<float>(q(5)),
-                                         static_cast<float>(dq(0)),
-                                         static_cast<float>(dq(1)),
-                                         static_cast<float>(dq(2)),
-                                         static_cast<float>(dq(3)),
-                                         static_cast<float>(dq(4)),
-                                         static_cast<float>(dq(5)),
-                                         static_cast<float>(tau_J(0)),
-                                         static_cast<float>(tau_J(1)),
-                                         static_cast<float>(tau_J(2)),
-                                         static_cast<float>(tau_J(3)),
-                                         static_cast<float>(tau_J(4)),
-                                         static_cast<float>(tau_J(5)),
-                                         static_cast<float>(dq_command_PID(0)),
-                                         static_cast<float>(dq_command_PID(1)),
-                                         static_cast<float>(dq_command_PID(2)),
-                                         static_cast<float>(dq_command_PID(3)),
-                                         static_cast<float>(dq_command_PID(4)),
-                                         static_cast<float>(dq_command_PID(5))},
-                                        torch::kFloat32)
-                              .reshape({1, 27});
-      // Wrap inputs in a vector of torch::jit::IValue
-      std::vector<torch::jit::IValue> observations;
-      observations.push_back(obs);
-      // Run the model's forward pass
-      torch::jit::IValue output = actor.forward(observations);
-      // Extract tensors from the output tuple
-      auto output_tuple = output.toTuple();
-      torch::Tensor output_tensor = output_tuple->elements()[0].toTensor();
-      // Convert Tensor to Eigen matrix
-      std::memcpy(dq_SAC.data(), output_tensor.data_ptr<float>(),
-                  output_tensor.numel() * sizeof(float));
-      if (false) {
-        std::cout << "!!!!!!!!!!!NEW dq_SAC=";
-        for (int i = 0; i < 6; i++) {
-          std::cout << dq_SAC(i) << " ";
-        }
-        std::cout << "\n";
-      }
-    }
-    //    dq_command = dq_command_PID;
     //  TODO should k_c be updated here or end of call?
     k_c += 1;  // k_c is used for the start_up phase speed profile only
     if (false) {
@@ -546,9 +502,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
   }
   if (start_up == true) {
-    e_EE_target[0] = (r_star_tf_warm_up(0) - EEposition(0));
-    e_EE_target[1] = (r_star_tf_warm_up(1) - EEposition(1));
-    e_EE_target[2] = (r_star_tf_warm_up(2) - EEposition(2));
+    e_EE_target[0] = (r_star_tf_start_up(0) - EEposition(0));
+    e_EE_target[1] = (r_star_tf_start_up(1) - EEposition(1));
+    e_EE_target[2] = (r_star_tf_start_up(2) - EEposition(2));
   } else if (start_up == false) {
     e_EE_target[0] = (r_star_tf(0) - EEposition(0));
     e_EE_target[1] = (r_star_tf(1) - EEposition(1));
@@ -561,7 +517,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   }
   double norm_e_EE_t = sqrt(accum);
   //  end startup phase if you reach below 1 mm distance to initial condition
-  if (norm_e_EE_t < 0.001 and start_up == true) {
+  if (norm_e_EE_t < 0.0005 and start_up == true) {
     if (false) {
       std::cout << "==========Warm-up ended==========" << " \n";
       std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
@@ -587,23 +543,25 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    TODO artificially wait to be sure the command published for the stepper motor trigger
     //    TODO implement more efficient solution
     artificial_wait_idx += 1;
-    if (artificial_wait_idx > 10) {  // 10 ms artificial delay
-      std::cout << "waiting!, artificial_wait_idx=" << artificial_wait_idx << " \n";
+    if (artificial_wait_idx > 3) {  // 3 ms artificial delay
       start_up = false;
+      std::cout << "Reached end of start-up phase!" << endl;
       // TODO ATTENTION: initialize KF at initial position
       X_prediction_ahead = EEposition;
       estimatesAposteriori = EEposition;
       //    TODO
       //  // TODO uncomment for offline demo
-      //      r_star_tf_warm_up[0] = 511 / 1000;
-      //      r_star_tf_warm_up[1] = 150 / 1000;
-      //      r_star_tf_warm_up[2] = 101 / 1000;
-      //      r_star_tf_warm_up[0] = p_hat_w(0)/1000;
-      //      r_star_tf_warm_up[1] = p_hat_w(1)/1000;
-      //      r_star_tf_warm_up[2] = p_hat_w(2)/1000;
-      //      r_star_tf_warm_up[0] = x_star(Eigen::last);
-      //      r_star_tf_warm_up[1] = y_star(Eigen::last);
-      //      r_star_tf_warm_up[2] = z_star(Eigen::last);
+      //      r_star_tf_start_up[0] = 511 / 1000;
+      //      r_star_tf_start_up[1] = 150 / 1000;
+      //      r_star_tf_start_up[2] = 101 / 1000;
+      //      r_star_tf_start_up[0] = p_hat_w(0)/1000;
+      //      r_star_tf_start_up[1] = p_hat_w(1)/1000;
+      //      r_star_tf_start_up[2] = p_hat_w(2)/1000;
+      //      r_star_tf_start_up[0] = x_star(Eigen::last);
+      //      r_star_tf_start_up[1] = y_star(Eigen::last);
+      //      r_star_tf_start_up[2] = z_star(Eigen::last);
+    } else {
+      std::cout << "waiting!, artificial_wait_idx=" << artificial_wait_idx << " \n";
     }
     //  stop condition at end of tracking
   } else if ((norm_e_EE_t < 0.003 and start_up == false)) {
@@ -622,6 +580,67 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
     PRIMITIVEVelocityController::stopRequest(ros::Time::now());
   } else {
+    if (k_SAC % 100 == 0 and start_up == false) {
+      // Directly access obs data pointer to modify values without reallocation
+      double* obs_data = obs.data_ptr<double>();
+      obs_data[0] = e_t.at(0);
+      obs_data[1] = e_t.at(1);
+      obs_data[2] = e_t.at(2);
+      obs_data[3] = q(0);
+      obs_data[4] = q(1);
+      obs_data[5] = q(2);
+      obs_data[6] = q(3);
+      obs_data[7] = q(4);
+      obs_data[8] = q(5);
+      obs_data[9] = dq(0);
+      obs_data[10] = dq(1);
+      obs_data[11] = dq(2);
+      obs_data[12] = dq(3);
+      obs_data[13] = dq(4);
+      obs_data[14] = dq(5);
+      obs_data[15] = tau_J(0);
+      obs_data[16] = tau_J(1);
+      obs_data[17] = tau_J(2);
+      obs_data[18] = tau_J(3);
+      obs_data[19] = tau_J(4);
+      obs_data[20] = tau_J(5);
+      obs_data[21] = dq_command_PID(0);
+      obs_data[22] = dq_command_PID(1);
+      obs_data[23] = dq_command_PID(2);
+      obs_data[24] = dq_command_PID(3);
+      obs_data[25] = dq_command_PID(4);
+      obs_data[26] = dq_command_PID(5);
+
+      // Run the model's forward pass without re-pushing to observations
+      torch::jit::IValue output = actor.forward(observations);
+
+      // Extract tensor output, check properties outside loop if possible
+      auto output_tuple = output.toTuple();
+      torch::Tensor output_tensor = output_tuple->elements()[0].toTensor();
+      assert(output_tensor.sizes() == torch::IntArrayRef({1, 6}) &&
+             output_tensor.dtype() == torch::kDouble);
+      assert(output_tensor.is_contiguous());
+
+      //      // Map output tensor data directly to dq_SAC without copying
+      //      Eigen::Map<Eigen::Matrix<double, 1, 6>>
+      //      dq_SAC_map(output_tensor.data_ptr<double>()); dq_SAC = dq_SAC_map;  // Copy mapped
+      //      data to dq_SAC
+      Eigen::Map<Eigen::Matrix<double, 1, 6>>(output_tensor.data_ptr<double>()).swap(dq_SAC);
+      //      }
+      if (false) {
+        std::cout << "!!!!!!!!!!!NEW dq_SAC=";
+        for (int i = 0; i < 6; i++) {
+          std::cout << dq_SAC(i) << " ";
+        }
+        std::cout << "\n";
+      }
+      //      auto end = std::chrono::high_resolution_clock::now();
+      //      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end -
+      //      start).count(); std::cout << "Time spent: " << duration << " microseconds" <<
+      //      std::endl; if (k > 2000) {
+      //        PRIMITIVEVelocityController::stopRequest(ros::Time::now());
+    }
+    k_SAC += 1;  // ATTENTION: should be after if condition of SAC (check concept)
     if (false) {
       std::cout << "==================================" << " \n";
       std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
@@ -637,9 +656,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       std::cout << "X_prediction_ahead(0)=" << X_prediction_ahead(0) << " \n";
       std::cout << "X_prediction_ahead(1)=" << X_prediction_ahead(1) << " \n";
       std::cout << "X_prediction_ahead(2)=" << X_prediction_ahead(2) << " \n";
-//      std::cout << "x0(0)=" << x0(0) << " \n";
-//      std::cout << "x0(1)=" << x0(1) << " \n";
-//      std::cout << "x0(2)=" << x0(2) << " \n";
+      //      std::cout << "x0(0)=" << x0(0) << " \n";
+      //      std::cout << "x0(1)=" << x0(1) << " \n";
+      //      std::cout << "x0(2)=" << x0(2) << " \n";
       std::cout << "dt=" << dt << " \n";
       std::cout << "k=" << k << " \n";
     }
@@ -665,12 +684,15 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
       dq_command(i) = dq_command_PID(i) + dq_SAC(i);
+      //      dq_command(i) = dq_command_PID(i);
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         if (true) {
           std::cout << "------------At joint i=" << i << "\n";
           std::cout << "JOINT LIMIT HIT!" << endl;
           std::cout << "dq_command(i)" << dq_command(i) << "\n";
+          std::cout << "dq_SAC(i)" << dq_SAC(i) << "\n";
+          std::cout << "dq_command_PID(i)" << dq_command_PID(i) << "\n";
           std::cout << "norm_e_EE_t=" << norm_e_EE_t << "\n";
           std::cout << "k=" << k << "\n";
         }
@@ -684,14 +706,18 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       velocity_joint_handles_[i].setCommand(dq_command(i));
     }
   }
+  if (false) {
+    std::cout << "EEposition=" << EEposition << " \n";
+    std::cout << "q=" << q << " \n";
+  }
   k += 1;
   //  TODO can this publish be moved just after command? or more efficiently publish?
   if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
     //    dq_command_float = dq_command.cast<float>();
     for (size_t i = 0; i < 7; ++i) {
       // inner loop 1: k=1ms (1000 Hz)
-//      PRIMITIVE_publisher_.msg_.dq_command[i] = dq_command(i);
-//      PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
+      //      PRIMITIVE_publisher_.msg_.dq_command[i] = dq_command(i);
+      //      PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
       PRIMITIVE_publisher_.msg_.dq_command_PID[i] = dq_command_PID(i);
       if (i < 6) {
         PRIMITIVE_publisher_.msg_.dq_SAC[i] = dq_SAC(i);

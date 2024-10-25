@@ -62,6 +62,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_;  // seems to be franka_states
   //  TODO check
   int k = 0;
+  int delay_SAC = 0;
+  int k_SAC = 0;
   int k_c = 0;
   int idx_i3 = 0;
   std::array<double, 3> I_e = {0, 0, 0};
@@ -87,7 +89,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::Matrix<double, 3, 1> r_star = r_star_0;
   Eigen::Matrix<double, 7, 1> dq_command_PID = {0, 0, 0, 0, 0, 0, 0};
   Eigen::Matrix<double, 7, 1> dq_command = {0, 0, 0, 0, 0, 0, 0};
-  Eigen::Matrix<double, 3, 1> r_star_tf_warm_up = {0.534, -0.2465, 0.1542};
+//  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.534, -0.2465, 0.1542};
+  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.534, -0.268, 0.1542};//sooner end startup phase for manual delay compensation
   Eigen::Matrix<double, 3, 1> r_star_tf = {0.534, +0.2285, 0.1542};
   double v_star_dir[3];
   double v_star[3];
@@ -121,7 +124,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   // covariance matrix of the state disturbance
   Eigen::Matrix<double, 3, 3> Q{{1, 0, 0}, {0, 4, 0}, {0, 0, 1}};
   // guess of the initial state estimate
-  //  Eigen::Matrix<double, 3, 1> x0 = r_star_tf_warm_up;
+  //  Eigen::Matrix<double, 3, 1> x0 = r_star_tf_start_up;
   // ATTENTION to dimension
   Eigen::Matrix<double, 1, 1> u;  //[m/ms]
   double u_mean = 0.0341e-3;      //[m/ms]
@@ -141,8 +144,10 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   int artificial_wait_idx = 0;
 
   torch::jit::script::Module actor;
-  Eigen::Matrix<float, 1, 6> dq_SAC{0, 0, 0, 0, 0, 0};
-  //  Eigen::Matrix<float, 7, 1> dq_command_float;
+  Eigen::Matrix<double, 1, 6> dq_SAC{0, 0, 0, 0, 0, 0};
+  // Pre-allocate the tensor and vector outside the real-time loop
+  torch::Tensor obs = torch::empty({1, 27}, torch::kDouble); // Pre-allocate with correct shape
+  std::vector<torch::jit::IValue> observations = {obs}; // Pre-allocate and wrap the tensor
 
   double K_p = 5;
   double K_i = 0.5;
