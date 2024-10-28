@@ -516,6 +516,19 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     accum += e_EE_target[i] * e_EE_target[i];
   }
   double norm_e_EE_t = sqrt(accum);
+
+  // TODO manual motor trigger delay compensation: more robust solution required
+  if (std::abs(e_EE_target[1]) < 0.020801 and start_up == true) {
+    //    TODO this is not necessarily is going to lock
+    //    publish message to switch on the conveyor belt
+    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
+      STEPPERMOTOR_publisher_.msg_.vector.x = 1;  // send command to trigger stepper motor
+      STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
+      STEPPERMOTOR_publisher_.unlockAndPublish();
+    }
+    std::cout << "Triggered stepper motor sooner!" << endl;
+  }
+
   //  end startup phase if you reach below 1 mm distance to initial condition
   if (norm_e_EE_t < 0.0005 and start_up == true) {
     if (false) {
@@ -533,37 +546,49 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       std::cout << "k=" << k << " \n";
       std::cout << "k_c=" << k_c << " \n";
     }
-    //    TODO this is not necessarily is going to lock
-    //    publish message to switch on the conveyor belt
-    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
-      STEPPERMOTOR_publisher_.msg_.vector.x = 1;  // send command to trigger stepper motor
-      STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
-      STEPPERMOTOR_publisher_.unlockAndPublish();
-    }
-    //    TODO artificially wait to be sure the command published for the stepper motor trigger
-    //    TODO implement more efficient solution
-    artificial_wait_idx += 1;
-    if (artificial_wait_idx > 3) {  // 3 ms artificial delay
-      start_up = false;
-      std::cout << "Reached end of start-up phase!" << endl;
-      // TODO ATTENTION: initialize KF at initial position
-      X_prediction_ahead = EEposition;
-      estimatesAposteriori = EEposition;
-      //    TODO
-      //  // TODO uncomment for offline demo
-      //      r_star_tf_start_up[0] = 511 / 1000;
-      //      r_star_tf_start_up[1] = 150 / 1000;
-      //      r_star_tf_start_up[2] = 101 / 1000;
-      //      r_star_tf_start_up[0] = p_hat_w(0)/1000;
-      //      r_star_tf_start_up[1] = p_hat_w(1)/1000;
-      //      r_star_tf_start_up[2] = p_hat_w(2)/1000;
-      //      r_star_tf_start_up[0] = x_star(Eigen::last);
-      //      r_star_tf_start_up[1] = y_star(Eigen::last);
-      //      r_star_tf_start_up[2] = z_star(Eigen::last);
-    } else {
-      std::cout << "waiting!, artificial_wait_idx=" << artificial_wait_idx << " \n";
-    }
+    start_up = false;
+    std::cout << "Reached end of start-up phase!" << endl;
+    // TODO ATTENTION: initialize KF at initial position
+    X_prediction_ahead = EEposition;
+    estimatesAposteriori = EEposition;
+        if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
+          STEPPERMOTOR_publisher_.msg_.vector.y = 1;  // send command for debugging only
+          STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
+          STEPPERMOTOR_publisher_.unlockAndPublish();
+        }
+    //    //    TODO this is not necessarily is going to lock
+    //    //    publish message to switch on the conveyor belt
+    //    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
+    //      STEPPERMOTOR_publisher_.msg_.vector.x = 1;  // send command to trigger stepper motor
+    //      STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
+    //      STEPPERMOTOR_publisher_.unlockAndPublish();
+    //    }
+    //    //    TODO artificially wait to be sure the command published for the stepper motor
+    //    trigger
+    //    //    TODO implement more efficient solution
+    //    artificial_wait_idx += 1;
+    //    if (artificial_wait_idx > 3) {  // 3 ms artificial delay
+    //      start_up = false;
+    //      std::cout << "Reached end of start-up phase!" << endl;
+    //      // TODO ATTENTION: initialize KF at initial position
+    //      X_prediction_ahead = EEposition;
+    //      estimatesAposteriori = EEposition;
+    //      //    TODO
+    //      //  // TODO uncomment for offline demo
+    //      //      r_star_tf_start_up[0] = 511 / 1000;
+    //      //      r_star_tf_start_up[1] = 150 / 1000;
+    //      //      r_star_tf_start_up[2] = 101 / 1000;
+    //      //      r_star_tf_start_up[0] = p_hat_w(0)/1000;
+    //      //      r_star_tf_start_up[1] = p_hat_w(1)/1000;
+    //      //      r_star_tf_start_up[2] = p_hat_w(2)/1000;
+    //      //      r_star_tf_start_up[0] = x_star(Eigen::last);
+    //      //      r_star_tf_start_up[1] = y_star(Eigen::last);
+    //      //      r_star_tf_start_up[2] = z_star(Eigen::last);
+    //    } else {
+    //      std::cout << "waiting!, artificial_wait_idx=" << artificial_wait_idx << " \n";
+    //    }
     //  stop condition at end of tracking
+
   } else if ((norm_e_EE_t < 0.003 and start_up == false)) {
     if (false) {
       std::cout << "++++++++++++++++TARGET REACHED, STOPPING+++++++++++++++" << " \n";

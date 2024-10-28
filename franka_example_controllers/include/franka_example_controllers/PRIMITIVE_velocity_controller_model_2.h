@@ -89,8 +89,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::Matrix<double, 3, 1> r_star = r_star_0;
   Eigen::Matrix<double, 7, 1> dq_command_PID = {0, 0, 0, 0, 0, 0, 0};
   Eigen::Matrix<double, 7, 1> dq_command = {0, 0, 0, 0, 0, 0, 0};
-//  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.534, -0.2465, 0.1542};
-  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.534, -0.268, 0.1542};//sooner end startup phase for manual delay compensation
+  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.534, -0.2465, 0.1542};
+//  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.534, -0.268, 0.1542};//sooner end startup phase for manual delay compensation
   Eigen::Matrix<double, 3, 1> r_star_tf = {0.534, +0.2285, 0.1542};
   double v_star_dir[3];
   double v_star[3];
