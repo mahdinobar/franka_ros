@@ -15,6 +15,10 @@
 
   <build_depend>message_generation</build_depend>
   <build_depend>eigen</build_depend>
+
+
+  <build_depend>pinocchio</build_depend>
+  <exec_depend>pinocchio</exec_depend>
 <!--  <build_depend>torch</build_depend>-->
 
   <build_export_depend>message_generation</build_export_depend>

@@ -28,6 +28,9 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(Eigen3 REQUIRED)
+set(PINOCCHIO_DIR /opt/openrobots/lib/cmake/pinocchio/)
+find_package(pinocchio REQUIRED)
+include_directories(${PINOCCHIO_INCLUDE_DIRS})
 #set(CMAKE_PREFIX_PATH "/home/mahdi/Downloads/libtorch")
 set(CMAKE_PREFIX_PATH "/home/mahdi/Downloads/libtorch-cxx11-abi-shared-with-deps-2.4.1+cpu/libtorch")
 find_package(Torch REQUIRED)
@@ -113,6 +116,7 @@ target_link_libraries(franka_example_controllers PUBLIC
         ${catkin_LIBRARIES}
         ${TORCH_LIBRARIES}
         ${class_loader_LIBRARIES}
+        ${PINOCCHIO_LIBRARIES}
 )
 #target_link_libraries(franka_example_controllers PUBLIC
 #        ${Franka_LIBRARIES}
