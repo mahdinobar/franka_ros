@@ -28,15 +28,36 @@
 #  $(arg arm_id)_joint7: 0.8183486256202034
 
 
-#joint poses corrospond to r_star_tf_ftc2 = {0.534, -0.2965, 0.1542}; manually measured upper left apriltag corner with tolerance 1 mm by my PI controller
+##joint poses corrospond to r_star_tf_ftc2 = {0.534, -0.2965, 0.1542}; manually measured upper left apriltag corner with tolerance 1 mm by my PI controller
+#joint_pose:
+#  $(arg arm_id)_joint1: -0.24160292308450512
+#  $(arg arm_id)_joint2: 0.4132453289912173
+#  $(arg arm_id)_joint3: -0.24160502188821328
+#  $(arg arm_id)_joint4: -2.012426832981177
+#  $(arg arm_id)_joint5: -0.1389382115601044
+#  $(arg arm_id)_joint6: 2.4397471245148825
+#  $(arg arm_id)_joint7: 1.6195687449770361
+
+##joint poses corrospond to r_star_tf_ftc2 = {0.534121626277439, -0.2953536243445049, 0.15352824044213864}; manually measured upper left apriltag corner with tolerance 1 mm by my PI controller
+#joint_pose:
+#  $(arg arm_id)_joint1: -0.24083664394995957
+#  $(arg arm_id)_joint2: 0.41129849077539105
+#  $(arg arm_id)_joint3: -0.2402213141980924
+#  $(arg arm_id)_joint4: -2.014587740068892
+#  $(arg arm_id)_joint5: -0.1365017075803545
+#  $(arg arm_id)_joint6: 2.4409728082618742
+#  $(arg arm_id)_joint7: 2.2227562127823236
+
+#joint poses corrospond to r_star_tf_ftc2 = {0.5341719324165605, -0.2758445190875657, 0.14369105360211876}; manually measured upper left apriltag corner with tolerance 1 mm by my PI controller
 joint_pose:
-  $(arg arm_id)_joint1: -0.24160292308450512
-  $(arg arm_id)_joint2: 0.4132453289912173
-  $(arg arm_id)_joint3: -0.24160502188821328
-  $(arg arm_id)_joint4: -2.012426832981177
-  $(arg arm_id)_joint5: -0.1389382115601044
-  $(arg arm_id)_joint6: 2.4397471245148825
-  $(arg arm_id)_joint7: 0.8195687449770361
+  $(arg arm_id)_joint1: -0.22683544711236076
+  $(arg arm_id)_joint2: 0.4152892646837951
+  $(arg arm_id)_joint3: -0.2240776697835826
+  $(arg arm_id)_joint4: -2.029656763049754
+  $(arg arm_id)_joint5: -0.1323494169192162
+  $(arg arm_id)_joint6: 2.433754967707292
+  $(arg arm_id)_joint7: 2.239142517407308
+
 ##joint poses corrospond to r_star_tf_ftc2 = {0.486437, -0.271439, 0.217004}; manually measured upper left apriltag corner with tolerance 1 mm by my PI controller
 #joint_pose:
 #  $(arg arm_id)_joint1: -0.38198187

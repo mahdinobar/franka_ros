@@ -1,11 +1,11 @@
 // Copyright (c) 2024 Mahdi Nobar
 
+#include <pinocchio/algorithm/frames.hpp>
 #include <pinocchio/fwd.hpp>
 #include <pinocchio/parsers/urdf.hpp>
 #include "pinocchio/algorithm/jacobian.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
-#include <pinocchio/algorithm/frames.hpp>
 
 #define MODEL_0 0  // or 0 if you want Kalman Filter MODEL_0 to be false
 #define MODEL_1 0  // or 0 if you want KF MODEL_1 to be false
@@ -233,13 +233,62 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   //                                    0.8195687449770361,
   //                                    0,
   //                                    0};
-  Eigen::Vector<double, 9> qtest = {-1.3059549114453173,
-                                    0.7192076477077032,
-                                    0.875579792128569,
-                                    -1.9994787244113494,
-                                    -0.8830029684405695,
-                                    2.3681265268060896,
-                                    2.4830138708386156,
+  //  Eigen::Vector<double, 9> qtest = {-1.3059549114453173,
+  //                                    0.7192076477077032,
+  //                                    0.875579792128569,
+  //                                    -1.9994787244113494,
+  //                                    -0.8830029684405695,
+  //                                    2.3681265268060896,
+  //                                    2.4830138708386156,
+  //                                    0,
+  //                                    0};
+  //  Eigen::Vector<double, 9> qtest = {-1.234047570759358,
+  //                                    0.7457857909705199,
+  //                                    0.773629118388543,
+  //                                    -1.9915847135262992,
+  //                                    -0.8438119640223302,
+  //                                    2.4205093688146047,
+  //                                    2.4531920247405683,
+  //                                    0,
+  //                                    0};
+  // //  config_1
+  //  Eigen::Vector<double, 9> qtest = {-0.9301793111064306,
+  //                                    0.49450755029781285,
+  //                                    0.45471354257384894,
+  //                                    -2.0204698669967036,
+  //                                    -0.23666417265518308,
+  //                                    2.4288299029403184,
+  //                                    2.0510621763268397,
+  //                                    0,
+  //                                    0};
+  //  config_2
+  //  Eigen::Vector<double, 9> qtest = {-0.9881747826233245,
+  //                                    0.4708130590649354,
+  //                                    0.5668641826347794,
+  //                                    -2.1084923157428275,
+  //                                    -0.43437336797782583,
+  //                                    2.4932114290686305,
+  //                                    2.2504281153844463,
+  //                                    0,
+  //                                    0};
+  //  config_3
+  //  Eigen::Vector<double, 9> qtest = {-1.0296787462318309,
+  //                                    0.48096827299833256,
+  //                                    0.875553047883381,
+  //                                    -2.244043147040059,
+  //                                    -0.6480849138365852,
+  //                                    2.4866819327407415,
+  //                                    2.687620257659091,
+  //                                    0,
+  //                                    0};
+  //  config_4
+  Eigen::Vector<double, 9> qtest = {0.8141299843864857,
+                                    0.395708563373378,
+                                    -0.5666434194037389,
+                                    -2.217901490830539,
+                                    0.33094864953125036,
+                                    2.5379558763239114,
+                                    2.3507009533801324,
                                     0,
                                     0};
   std::cout << "qtest: " << qtest.transpose() << std::endl;
@@ -252,7 +301,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   }
 
   // Print out the placement of each joint of the kinematic tree
-  std::cout << "oMi\n" ;
+  std::cout << "oMi\n";
   for (pinocchio::JointIndex joint_id = 0; joint_id < (pinocchio::JointIndex)model.njoints;
        ++joint_id) {
     std::cout << std::setw(24) << std::left << model.names[joint_id] << ": " << std::fixed
@@ -260,26 +309,24 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   }
   // Print joint transformations including fixed links
   for (size_t frame_id = 0; frame_id < model.frames.size(); ++frame_id) {
-    const auto &frame = model.frames[frame_id];
-    std::cout << std::setw(24) << std::left << frame.name << ": "
-              << std::fixed << std::setprecision(6)
-              << data.oMf[frame_id].translation().transpose() << std::endl;
+    const auto& frame = model.frames[frame_id];
+    std::cout << std::setw(24) << std::left << frame.name << ": " << std::fixed
+              << std::setprecision(6) << data.oMf[frame_id].translation().transpose() << std::endl;
   }
 
-
-  std::cout << "oMf\n" ;
+  std::cout << "oMf\n";
   for (pinocchio::JointIndex joint_id = 0; joint_id < (pinocchio::JointIndex)model.njoints;
        ++joint_id) {
     std::cout << std::setw(24) << std::left << model.names[joint_id] << ": " << std::fixed
               << std::setprecision(6) << data.oMf[joint_id].translation().transpose() << std::endl;
   }
-  std::cout << "liMi\n" ;
+  std::cout << "liMi\n";
   for (pinocchio::JointIndex joint_id = 0; joint_id < (pinocchio::JointIndex)model.njoints;
        ++joint_id) {
     std::cout << std::setw(24) << std::left << model.names[joint_id] << ": " << std::fixed
               << std::setprecision(6) << data.liMi[joint_id].translation().transpose() << std::endl;
   }
-  std::cout << "iMf\n" ;
+  std::cout << "iMf\n";
   for (pinocchio::JointIndex joint_id = 0; joint_id < (pinocchio::JointIndex)model.njoints;
        ++joint_id) {
     std::cout << std::setw(24) << std::left << model.names[joint_id] << ": " << std::fixed
@@ -308,60 +355,61 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   pinocchio::computeJointJacobian(model, data, qtest, JOINT_ID, J);
   std::cout << "URDF8 Pinnocchio Jacobian matrix J:\n" << J << std::endl;
 
-
-
   // Get the frame ID of the last frame
   pinocchio::FrameIndex frame_id = model.frames.size() - 1;
   cout << "model.frames.size()=" << model.frames.size() << endl;
   // Resize the Jacobian matrix to fit a 6xN Jacobian (spatial Jacobian, for 6 DoF in SE(3) space)
   Eigen::MatrixXd JJ(6, model.nv);
   // Calculate the Jacobian for the frame with respect to the joint configuration qtest
-  pinocchio::computeFrameJacobian(model, data, qtest, frame_id, pinocchio::ReferenceFrame::LOCAL, JJ);
+  pinocchio::computeFrameJacobian(model, data, qtest, frame_id, pinocchio::ReferenceFrame::LOCAL,
+                                  JJ);
   // Print the Jacobian for the frame
   std::cout << "Jacobian for frame " << model.frames[frame_id].name << ":\n" << JJ << std::endl;
 
-
   cout << "===============================================" << endl;
   for (size_t frame_id = 0; frame_id < model.frames.size(); ++frame_id) {
-    const auto &frame = model.frames[frame_id];
+    const auto& frame = model.frames[frame_id];
     std::cout << "Frame Name: " << frame.name << ", Frame ID: " << frame_id << std::endl;
 
     // Compute Jacobian for the frame
     Eigen::MatrixXd jacobian(6, model.nv);
-    pinocchio::computeFrameJacobian(model, data, qtest, frame_id, pinocchio::ReferenceFrame::WORLD, jacobian);
+    pinocchio::computeFrameJacobian(model, data, qtest, frame_id, pinocchio::ReferenceFrame::WORLD,
+                                    jacobian);
 
     // Extract the translational part
-//    Eigen::MatrixXd translational_jacobian = jacobian.topRows(3);
+    //    Eigen::MatrixXd translational_jacobian = jacobian.topRows(3);
     std::cout << "Jacobian for " << frame.name << ":\n" << jacobian << std::endl;
   }
   cout << "===============================================" << endl;
 
   cout << "////////////////////////////////////////////////" << endl;
   for (size_t frame_id = 0; frame_id < model.frames.size(); ++frame_id) {
-    const auto &frame = model.frames[frame_id];
+    const auto& frame = model.frames[frame_id];
     std::cout << "Frame Name: " << frame.name << ", Frame ID: " << frame_id << std::endl;
 
     // Compute Jacobian for the frame
     Eigen::MatrixXd jacobian(6, model.nv);
-    pinocchio::computeFrameJacobian(model, data, qtest, frame_id, pinocchio::ReferenceFrame::LOCAL, jacobian);
+    pinocchio::computeFrameJacobian(model, data, qtest, frame_id, pinocchio::ReferenceFrame::LOCAL,
+                                    jacobian);
 
     // Extract the translational part
-//    Eigen::MatrixXd translational_jacobian = jacobian.topRows(3);
+    //    Eigen::MatrixXd translational_jacobian = jacobian.topRows(3);
     std::cout << "Jacobian for " << frame.name << ":\n" << jacobian << std::endl;
   }
   cout << "////////////////////////////////////////////////" << endl;
 
   cout << "************************************************" << endl;
   for (size_t frame_id = 0; frame_id < model.frames.size(); ++frame_id) {
-    const auto &frame = model.frames[frame_id];
+    const auto& frame = model.frames[frame_id];
     std::cout << "Frame Name: " << frame.name << ", Frame ID: " << frame_id << std::endl;
 
     // Compute Jacobian for the frame
     Eigen::MatrixXd jacobian(6, model.nv);
-    pinocchio::computeFrameJacobian(model, data, qtest, frame_id, pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED, jacobian);
+    pinocchio::computeFrameJacobian(model, data, qtest, frame_id,
+                                    pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED, jacobian);
 
     // Extract the translational part
-//    Eigen::MatrixXd translational_jacobian = jacobian.topRows(3);
+    //    Eigen::MatrixXd translational_jacobian = jacobian.topRows(3);
     std::cout << "Jacobian for " << frame.name << ":\n" << jacobian << std::endl;
   }
   cout << "************************************************" << endl;
@@ -423,7 +471,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       //      TODO Pay attention
       p_hat_w(0) = (curr_cmd.x + 21) / 1000;
       p_hat_w(1) = (curr_cmd.y + 25 + 1.8) / 1000;
-      p_hat_w(2) = (curr_cmd.z + 54) / 1000;
+      p_hat_w(2) = (curr_cmd.z + 44) / 1000;
       // TODO
       double t_measurement = curr_cmd.t_stamp_camera_measurement;
       dt = (t_measurement - t_0) * 1000;  //[ms]
@@ -625,8 +673,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     std::array<double, 42> jacobian_array =
         model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
     Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
-    std::cout << "-----Jacobian matrix:\n" << jacobian << std::endl;
-    std::cout << "-----EEposition:\n" << EEposition << std::endl;
+    //    std::cout << "-----Jacobian matrix:\n" << jacobian << std::endl;
+    //    std::cout << "-----EEposition:\n" << EEposition << std::endl;
     std::vector<int> ind_translational_jacobian{0, 1, 2};
     std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
     Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
@@ -692,7 +740,10 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   double norm_e_EE_t = sqrt(accum);
 
   // TODO manual motor trigger delay compensation: more robust solution required
-  if (std::abs(e_EE_target[1]) < 0.020801 and start_up == true) {
+  //    if (std::abs(e_EE_target[1]) < 0.020801 and start_up == true) {
+  //  TODO improve temporary solution: due to delay manually approximated corrosponding startup
+  //  phase, trigger motor after k=500[ms]
+  if (k > 500 and start_up == true) {
     //    TODO this is not necessarily is going to lock
     //    publish message to switch on the conveyor belt
     if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
@@ -825,6 +876,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       //      dq_SAC_map(output_tensor.data_ptr<double>()); dq_SAC = dq_SAC_map;  // Copy mapped
       //      data to dq_SAC
       Eigen::Map<Eigen::Matrix<double, 1, 6>>(output_tensor.data_ptr<double>()).swap(dq_SAC);
+      if (false) {
+        std::cout << "dq_SAC updated!!!\n";
+      }
       //      }
       if (false) {
         std::cout << "!!!!!!!!!!!NEW dq_SAC=";
@@ -840,6 +894,10 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       //        PRIMITIVEVelocityController::stopRequest(ros::Time::now());
     }
     k_SAC += 1;  // ATTENTION: should be after if condition of SAC (check concept)
+    if (false) {
+      std::cout << "k_SAC=" << k_SAC << "\n";
+      std::cout << "dq_SAC=" << dq_SAC << "\n";
+    }
     if (false) {
       std::cout << "==================================" << " \n";
       std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
@@ -882,8 +940,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    }
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
-      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
-      //      dq_command(i) = dq_command_PID(i);
+      //      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
+      dq_command(i) = dq_command_PID(i);
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         if (true) {
@@ -902,7 +960,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
         }
       }
       //              send control command
-      //      velocity_joint_handles_[i].setCommand(dq_command(i));
+      velocity_joint_handles_[i].setCommand(dq_command(i));
     }
   }
   if (false) {

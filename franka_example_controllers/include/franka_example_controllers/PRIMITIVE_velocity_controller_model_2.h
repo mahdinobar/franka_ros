@@ -86,13 +86,15 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   static const int Target_Traj_ROWS = 6381;
   static const int Target_Traj_COLUMNS = 3;
   float q_star[Target_Traj_ROWS][9];
-  Eigen::Matrix<double, 3, 1> r_star_0 = {0.534, -0.2965, 0.1542};
+//  Eigen::Matrix<double, 3, 1> r_star_0 = {0.534121626277439, -0.2953536243445049, 0.15352824044213864};
+  Eigen::Matrix<double, 3, 1> r_star_0 = {0.5341719324165605, -0.2758445190875657, 0.14369105360211876};
   Eigen::Matrix<double, 3, 1> r_star = r_star_0;
   Eigen::Matrix<double, 7, 1> dq_command_PID = {0, 0, 0, 0, 0, 0, 0};
   Eigen::Matrix<double, 7, 1> dq_command = {0, 0, 0, 0, 0, 0, 0};
-  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.534, -0.2465, 0.1542};
-//  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.534, -0.268, 0.1542};//sooner end startup phase for manual delay compensation
-  Eigen::Matrix<double, 3, 1> r_star_tf = {0.534, +0.2285, 0.1542};
+//  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.534121626277439, -0.2453536243445049, 0.15352824044213864};
+  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.5341719324165605, -0.2458445190875657, 0.14369105360211876};
+//  Eigen::Matrix<double, 3, 1> r_star_tf = {0.534121626277439, +0.229646376, 0.15352824044213864};
+  Eigen::Matrix<double, 3, 1> r_star_tf = {0.5341719324165605, 0.229155481, 0.14369105360211876};
   double v_star_dir[3];
   double v_star[3];
   std::array<double, 3> e_t = {0, 0, 0};
