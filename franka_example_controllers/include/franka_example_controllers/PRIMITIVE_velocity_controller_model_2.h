@@ -56,6 +56,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   std::unique_ptr<franka_hw::FrankaModelHandle> model_handle_;
   ros::Duration elapsed_time_;
   double t_0;
+  double t_0_EE;
   std::array<double, 7> initial_pose_{};
   std::array<double, 7> joints_pose_{};
   std::array<double, 7> joints_vel_{};
@@ -79,8 +80,11 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
     Commands() : x(55.0), y(66.0), z(77.0), t_stamp_camera_measurement(0.0) {}
   };
   realtime_tools::RealtimeBuffer<Commands> command_;
+  realtime_tools::RealtimeBuffer<Commands> command_EE_;
   Commands command_struct_;
+  Commands command_struct_EE_;
   ros::Subscriber sub_command_;
+  ros::Subscriber sub_command_EE_;
   bool allow_multiple_cmd_vel_publishers_;
   const bool debug = false;
   static const int Target_Traj_ROWS = 6381;
@@ -92,9 +96,12 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::Matrix<double, 7, 1> dq_command_PID = {0, 0, 0, 0, 0, 0, 0};
   Eigen::Matrix<double, 7, 1> dq_command = {0, 0, 0, 0, 0, 0, 0};
 //  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.534121626277439, -0.2453536243445049, 0.15352824044213864};
-  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.5341719324165605, -0.2458445190875657, 0.14369105360211876};
+//  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.5341719324165605, -0.2458445190875657, 0.14369105360211876};
+  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.5345, -0.2465, 0.1442};
 //  Eigen::Matrix<double, 3, 1> r_star_tf = {0.534121626277439, +0.229646376, 0.15352824044213864};
-  Eigen::Matrix<double, 3, 1> r_star_tf = {0.5341719324165605, 0.229155481, 0.14369105360211876};
+//  Eigen::Matrix<double, 3, 1> r_star_tf = {0.5341719324165605, 0.229155481, 0.14369105360211876};
+//  Eigen::Matrix<double, 3, 1> r_star_tf = {0.5345, -0.2465, 0.1442};
+  Eigen::Matrix<double, 3, 1> r_star_tf = {0.5345, 0.2285, 0.1442}; //475 mm forwarded
   double v_star_dir[3];
   double v_star[3];
   std::array<double, 3> e_t = {0, 0, 0};
@@ -109,6 +116,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   void cmdVelCallback2(const std_msgs::Float64MultiArray& command);
   Eigen::Vector<double, 3> drift = {0, 0, 0};
   Eigen::Vector<double, 3> p_hat_w{0, 0, 0};
+  Eigen::Vector<double, 3> p_hat_EE_w{0, 0, 0};
   Eigen::MatrixXd x_star;
   Eigen::MatrixXd y_star;
   Eigen::MatrixXd z_star;
@@ -136,6 +144,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   unsigned int maxDataSamples_KF = 2;
   bool received_measurement = false;
   double dt = 0;
+  double dt_EE = 0;
   //  Eigen::Matrix<double, 3, 1> X_prediction_ahead = x0;
   //  Eigen::Matrix<double, 3, 1> estimatesAposteriori = x0;
   Eigen::Matrix<double, 3, 1> X_prediction_ahead;
@@ -151,6 +160,10 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   // Pre-allocate the tensor and vector outside the real-time loop
   torch::Tensor obs = torch::empty({1, 27}, torch::kDouble); // Pre-allocate with correct shape
   std::vector<torch::jit::IValue> observations = {obs}; // Pre-allocate and wrap the tensor
+
+  Eigen::Vector3d e_mismatch{0, 0, 0};
+  Eigen::Vector3d EEposition{0, 0, 0};
+  double K_mismatch=0.5;
 
   double K_p = 5;
   double K_i = 0.5;
