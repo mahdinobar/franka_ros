@@ -113,6 +113,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
                                          {0, 0, 1, 0},
                                          {0, 0, 0, 1}};
   void cmdVelCallback(const geometry_msgs::Vector3Stamped& data);
+  void cmdVelCallback_EE(const geometry_msgs::Vector3Stamped& data);
   void cmdVelCallback2(const std_msgs::Float64MultiArray& command);
   Eigen::Vector<double, 3> drift = {0, 0, 0};
   Eigen::Vector<double, 3> p_hat_w{0, 0, 0};

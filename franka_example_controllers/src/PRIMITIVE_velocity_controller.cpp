@@ -77,7 +77,7 @@ Eigen::MatrixXd CSVopen(std::string fileToOpen) {
       matrixEntries.data(), matrixRowNumber, matrixEntries.size() / matrixRowNumber);
 }
 
-PRIMITIVEVelocityController::PRIMITIVEVelocityController() : command_struct_() {}
+PRIMITIVEVelocityController::PRIMITIVEVelocityController() : command_struct_(), command_struct_EE_() {}
 void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Stamped& data) {
   command_struct_.x = data.vector.x;
   command_struct_.y = data.vector.y;
@@ -94,7 +94,6 @@ void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Sta
   cout << "data.y" << data.vector.y << endl;
   cout << "data.z" << data.vector.z << endl;
 }
-PRIMITIVEVelocityController::PRIMITIVEVelocityController() : command_struct_EE_() {}
 void PRIMITIVEVelocityController::cmdVelCallback_EE(const geometry_msgs::Vector3Stamped& data) {
   command_struct_EE_.x = data.vector.x;
   command_struct_EE_.y = data.vector.y;
@@ -495,7 +494,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       double t_measurement = curr_cmd.t_stamp_camera_measurement;
       dt = (t_measurement - t_0) * 1000;  //[ms]
       t_0 = t_measurement;
-    } catch () {
+    } catch (int N) {
       std::cout << "ERROR: CANNOT hear p_hat_w!" << "\n";
     }
     try {
@@ -508,7 +507,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       double t_measurement_EE = curr_cmd_EE.t_stamp_camera_measurement;
       dt_EE = (t_measurement_EE - t_0_EE) * 1000;  //[ms]
       t_0_EE = t_measurement_EE;
-    } catch () {
+    } catch (int N) {
       std::cout << "ERROR: CANNOT hear p_hat_EE_w!" << "\n";
     }
   }
