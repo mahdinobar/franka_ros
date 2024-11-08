@@ -29,7 +29,6 @@
 #include <torch/script.h>
 #include <torch/torch.h>
 
-
 namespace franka_example_controllers {
 
 class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceController<
@@ -90,18 +89,21 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   static const int Target_Traj_ROWS = 6381;
   static const int Target_Traj_COLUMNS = 3;
   float q_star[Target_Traj_ROWS][9];
-//  Eigen::Matrix<double, 3, 1> r_star_0 = {0.534121626277439, -0.2953536243445049, 0.15352824044213864};
-  Eigen::Matrix<double, 3, 1> r_star_0 = {0.5341719324165605, -0.2758445190875657, 0.14369105360211876};
+  //  Eigen::Matrix<double, 3, 1> r_star_0 = {0.5341719324165605, -0.2758445190875657,
+  //  0.14369105360211876};
+  Eigen::Matrix<double, 3, 1> r_star_0 = {0.53106, -0.261387, 0.13763};
   Eigen::Matrix<double, 3, 1> r_star = r_star_0;
   Eigen::Matrix<double, 7, 1> dq_command_PID = {0, 0, 0, 0, 0, 0, 0};
   Eigen::Matrix<double, 7, 1> dq_command = {0, 0, 0, 0, 0, 0, 0};
-//  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.534121626277439, -0.2453536243445049, 0.15352824044213864};
-//  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.5341719324165605, -0.2458445190875657, 0.14369105360211876};
+  //  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.534121626277439, -0.2453536243445049,
+  //  0.15352824044213864}; Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.5341719324165605,
+  //  -0.2458445190875657, 0.14369105360211876};
   Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.5345, -0.2465, 0.1442};
-//  Eigen::Matrix<double, 3, 1> r_star_tf = {0.534121626277439, +0.229646376, 0.15352824044213864};
-//  Eigen::Matrix<double, 3, 1> r_star_tf = {0.5341719324165605, 0.229155481, 0.14369105360211876};
-//  Eigen::Matrix<double, 3, 1> r_star_tf = {0.5345, -0.2465, 0.1442};
-  Eigen::Matrix<double, 3, 1> r_star_tf = {0.5345, 0.2285, 0.1442}; //475 mm forwarded
+  //  Eigen::Matrix<double, 3, 1> r_star_tf = {0.534121626277439, +0.229646376,
+  //  0.15352824044213864}; Eigen::Matrix<double, 3, 1> r_star_tf = {0.5341719324165605,
+  //  0.229155481, 0.14369105360211876}; Eigen::Matrix<double, 3, 1> r_star_tf = {0.5345, -0.2465,
+  //  0.1442};
+  Eigen::Matrix<double, 3, 1> r_star_tf = {0.5345, 0.2285, 0.1442};  // 475 mm forwarded
   double v_star_dir[3];
   double v_star[3];
   std::array<double, 3> e_t = {0, 0, 0};
@@ -159,14 +161,15 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   torch::jit::script::Module actor;
   Eigen::Matrix<double, 1, 6> dq_SAC{0, 0, 0, 0, 0, 0};
   // Pre-allocate the tensor and vector outside the real-time loop
-  torch::Tensor obs = torch::empty({1, 27}, torch::kDouble); // Pre-allocate with correct shape
-  std::vector<torch::jit::IValue> observations = {obs}; // Pre-allocate and wrap the tensor
+  torch::Tensor obs = torch::empty({1, 27}, torch::kDouble);  // Pre-allocate with correct shape
+  std::vector<torch::jit::IValue> observations = {obs};       // Pre-allocate and wrap the tensor
 
   Eigen::Vector3d e_mismatch{0, 0, 0};
+  //  Eigen::Vector3d e_mismatch{-0.003111932, 0.014457519, -0.006061054};
   Eigen::Vector3d EEposition_kinematics{0, 0, 0};
   Eigen::Vector3d EEposition{0, 0, 0};
   bool received_measurement_EE = false;
-  double K_mismatch=0.5;
+  double K_mismatch = 0.1;
 
   double K_p = 5;
   double K_i = 0.5;

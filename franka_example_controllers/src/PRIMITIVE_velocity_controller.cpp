@@ -77,7 +77,8 @@ Eigen::MatrixXd CSVopen(std::string fileToOpen) {
       matrixEntries.data(), matrixRowNumber, matrixEntries.size() / matrixRowNumber);
 }
 
-PRIMITIVEVelocityController::PRIMITIVEVelocityController() : command_struct_(), command_struct_EE_() {}
+PRIMITIVEVelocityController::PRIMITIVEVelocityController()
+    : command_struct_(), command_struct_EE_() {}
 void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Stamped& data) {
   command_struct_.x = data.vector.x;
   command_struct_.y = data.vector.y;
@@ -89,10 +90,10 @@ void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Sta
   command_struct_.t_stamp_camera_measurement = data.header.stamp.toSec();
   command_.writeFromNonRT(command_struct_);
   received_measurement = true;
-  cout << "Camera measurement received!" << endl;
-  cout << "data.x" << data.vector.x << endl;
-  cout << "data.y" << data.vector.y << endl;
-  cout << "data.z" << data.vector.z << endl;
+  cout << "Camera measurement received!\n" << endl;
+  cout << "data.x=" << data.vector.x << endl;
+  cout << "data.y=" << data.vector.y << endl;
+  cout << "data.z=" << data.vector.z << endl;
 }
 void PRIMITIVEVelocityController::cmdVelCallback_EE(const geometry_msgs::Vector3Stamped& data) {
   command_struct_EE_.x = data.vector.x;
@@ -105,10 +106,10 @@ void PRIMITIVEVelocityController::cmdVelCallback_EE(const geometry_msgs::Vector3
   command_struct_EE_.t_stamp_camera_measurement = data.header.stamp.toSec();
   command_EE_.writeFromNonRT(command_struct_EE_);
   received_measurement_EE = true;
-  cout << "Camera EE measurement received!!" << endl;
-  cout << "data.x" << data.vector.x << endl;
-  cout << "data.y" << data.vector.y << endl;
-  cout << "data.z" << data.vector.z << endl;
+  cout << "Camera EE measurement received!!\n" << endl;
+  cout << "data_EE.x=" << data.vector.x << endl;
+  cout << "data_EE.y=" << data.vector.y << endl;
+  cout << "data_EE.z=" << data.vector.z << endl;
 }
 
 bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardware,
@@ -224,7 +225,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   // example.
   const std::string urdf_filename = std::string(
       "/home/mahdi/catkin_ws/src/franka_ros/franka_description/robots/panda/"
-      "panda_corrected_Nosc_Zlajpah.urdf");
+      "panda_corrected_Nosc.urdf");
   // Load the urdf model
   pinocchio::Model model;
   pinocchio::urdf::buildModel(urdf_filename, model);
@@ -500,9 +501,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     try {
       Commands curr_cmd_EE = *(command_EE_.readFromRT());
       //      TODO Pay attention: here we correct the camere raw measurements offsets
-      p_hat_EE_w(0) = (curr_cmd_EE.x + 20.5) / 1000;
-      p_hat_EE_w(1) = (curr_cmd_EE.y + 25 + 1.8) / 1000;
-      p_hat_EE_w(2) = (curr_cmd_EE.z + 44) / 1000;
+      p_hat_EE_w(0) = (curr_cmd_EE.x) / 1000;
+      p_hat_EE_w(1) = (curr_cmd_EE.y) / 1000;
+      p_hat_EE_w(2) = (curr_cmd_EE.z) / 1000;
       // TODO
       double t_measurement_EE = curr_cmd_EE.t_stamp_camera_measurement;
       dt_EE = (t_measurement_EE - t_0_EE) * 1000;  //[ms]
@@ -520,16 +521,13 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
   //  Eigen::Vector3d EEposition(transform.translation());
   EEposition_kinematics = transform.translation();
-  cout << "---EEposition_kinematics=" << EEposition_kinematics << "\n";
-  if (start_up == false) {
-    if (received_measurement_EE == true and dt_EE > 0) {
-      e_mismatch += K_mismatch * (p_hat_EE_w - EEposition);
-      received_measurement_EE = false;
-      EEposition = EEposition_kinematics + e_mismatch;
-      cout << "e_mismatch=" << e_mismatch << "\n";
-      cout << "+++EEposition=" << EEposition << "\n";
-    }
+  //  if (start_up == false) {
+  if (received_measurement_EE == true and dt_EE > 0) {
+    e_mismatch = e_mismatch + K_mismatch * (p_hat_EE_w - EEposition);
+    received_measurement_EE = false;
   }
+  //  }
+  EEposition = EEposition_kinematics + e_mismatch;
 
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
@@ -799,7 +797,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   }
 
   //  end startup phase if you reach below 1 mm distance to initial condition
-  if (norm_e_EE_t < 0.0005 and start_up == true) {
+  if (norm_e_EE_t < 0.002 and start_up == true) {
     if (false) {
       std::cout << "==========Warm-up ended==========" << " \n";
       std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
@@ -1036,6 +1034,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       }
       if (i < 3) {
         PRIMITIVE_publisher_.msg_.r_star[i] = r_star(i);
+        PRIMITIVE_publisher_.msg_.r_star[i] = r_star(i);
+        PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
+        PRIMITIVE_publisher_.msg_.e_mismatch[i] = e_mismatch(i);
       }
     }
     PRIMITIVE_publisher_.unlockAndPublish();
