@@ -520,13 +520,13 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   franka::RobotState robot_state = state_handle_->getRobotState();
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
   //  Eigen::Vector3d EEposition(transform.translation());
-  EEposition = transform.translation();
-  cout << "---EEposition=" << EEposition << "\n";
+  EEposition_kinematics = transform.translation();
+  cout << "---EEposition_kinematics=" << EEposition_kinematics << "\n";
   if (start_up == false) {
     if (received_measurement_EE == true and dt_EE > 0) {
-      e_mismatch += K_mismatch * (p_hat_EE_w - EEposition_corrected);
+      e_mismatch += K_mismatch * (p_hat_EE_w - EEposition);
       received_measurement_EE = false;
-      EEposition += e_mismatch;
+      EEposition = EEposition_kinematics + e_mismatch;
       cout << "e_mismatch=" << e_mismatch << "\n";
       cout << "+++EEposition=" << EEposition << "\n";
     }

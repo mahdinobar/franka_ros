@@ -162,7 +162,9 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   std::vector<torch::jit::IValue> observations = {obs}; // Pre-allocate and wrap the tensor
 
   Eigen::Vector3d e_mismatch{0, 0, 0};
+  Eigen::Vector3d EEposition_kinematics{0, 0, 0};
   Eigen::Vector3d EEposition{0, 0, 0};
+  bool received_measurement_EE = false;
   double K_mismatch=0.5;
 
   double K_p = 5;
