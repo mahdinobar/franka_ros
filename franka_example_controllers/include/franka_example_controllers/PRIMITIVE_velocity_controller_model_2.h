@@ -91,14 +91,15 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   float q_star[Target_Traj_ROWS][9];
   //  Eigen::Matrix<double, 3, 1> r_star_0 = {0.5341719324165605, -0.2758445190875657,
   //  0.14369105360211876};
-  Eigen::Matrix<double, 3, 1> r_star_0 = {0.53106, -0.261387, 0.13763};
+//  Eigen::Matrix<double, 3, 1> r_star_0 = {0.53106, -0.261387, 0.13763};
+  Eigen::Matrix<double, 3, 1> r_star_0 = {0.52782, -0.26734, 0.13539};
   Eigen::Matrix<double, 3, 1> r_star = r_star_0;
   Eigen::Matrix<double, 7, 1> dq_command_PID = {0, 0, 0, 0, 0, 0, 0};
   Eigen::Matrix<double, 7, 1> dq_command = {0, 0, 0, 0, 0, 0, 0};
   //  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.534121626277439, -0.2453536243445049,
   //  0.15352824044213864}; Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.5341719324165605,
   //  -0.2458445190875657, 0.14369105360211876};
-  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.5345, -0.2465, 0.1442};
+  Eigen::Matrix<double, 3, 1> r_star_tf_start_up = {0.5345, -0.2455, 0.1392}; //from geometric manual measurement 4 cm above center of upper surface of cube
   //  Eigen::Matrix<double, 3, 1> r_star_tf = {0.534121626277439, +0.229646376,
   //  0.15352824044213864}; Eigen::Matrix<double, 3, 1> r_star_tf = {0.5341719324165605,
   //  0.229155481, 0.14369105360211876}; Eigen::Matrix<double, 3, 1> r_star_tf = {0.5345, -0.2465,

@@ -198,7 +198,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   // Load your serialized model --- SAC Actor Neural Network
   actor = torch::jit::load(
       "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/config/"
-      "traced_model_Cpp_Fep_HW_101_double.pt");
+      "traced_model_Cpp_Fep_HW_204_double.pt");
   std::cout << "+++++Actor model loaded successfully.+++++" << std::endl;
   //  torch::Tensor input_tensor = torch::ones({1, 27});  // Example random tensor
   //  // Wrap inputs in a vector of torch::jit::IValue
@@ -488,9 +488,11 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     try {
       Commands curr_cmd = *(command_.readFromRT());
       //      TODO Pay attention: here we correct the camere raw measurements offsets
-      p_hat_w(0) = (curr_cmd.x + 20.5) / 1000;
-      p_hat_w(1) = (curr_cmd.y + 25 + 1.8) / 1000;
-      p_hat_w(2) = (curr_cmd.z + 44) / 1000;
+      // ATTENTION: based on primitive 50 camera estimation of upper edge corner of April tag:
+      // offset is {-0.06, +2.99, -0.12};
+      p_hat_w(0) = (curr_cmd.x + 20.5 - 0.06) / 1000;
+      p_hat_w(1) = (curr_cmd.y + 25 + 2.99) / 1000;
+      p_hat_w(2) = (curr_cmd.z + 39 - 0.12) / 1000;
       // TODO
       double t_measurement = curr_cmd.t_stamp_camera_measurement;
       dt = (t_measurement - t_0) * 1000;  //[ms]
@@ -501,9 +503,11 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     try {
       Commands curr_cmd_EE = *(command_EE_.readFromRT());
       //      TODO Pay attention: here we correct the camere raw measurements offsets
-      p_hat_EE_w(0) = (curr_cmd_EE.x) / 1000;
-      p_hat_EE_w(1) = (curr_cmd_EE.y) / 1000;
-      p_hat_EE_w(2) = (curr_cmd_EE.z) / 1000;
+      // ATTENTION: based on primitive 50 camera estimation of upper edge corner of April tag:
+      // offset is {-0.06, +2.99, -0.12};
+      p_hat_EE_w(0) = (curr_cmd_EE.x - 0.06) / 1000;
+      p_hat_EE_w(1) = (curr_cmd_EE.y + 2.99) / 1000;
+      p_hat_EE_w(2) = (curr_cmd_EE.z - 0.12) / 1000;
       // TODO
       double t_measurement_EE = curr_cmd_EE.t_stamp_camera_measurement;
       dt_EE = (t_measurement_EE - t_0_EE) * 1000;  //[ms]
@@ -521,9 +525,14 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
   //  Eigen::Vector3d EEposition(transform.translation());
   EEposition_kinematics = transform.translation();
+  //  Observer of true EE position based on sparse camera measurements
   //  if (start_up == false) {
   if (received_measurement_EE == true and dt_EE > 0) {
+    //    cout << "before e_mismatch=" << e_mismatch << "\n";
     e_mismatch = e_mismatch + K_mismatch * (p_hat_EE_w - EEposition);
+    //    cout << "p_hat_EE_w=" << p_hat_EE_w << "\n";
+    //    cout << "EEposition=" << EEposition << "\n";
+    //    cout << "after e_mismatch=" << e_mismatch << "\n";
     received_measurement_EE = false;
   }
   //  }
@@ -532,55 +541,11 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> tau_J(robot_state.tau_J.data());
-  //  UNCOMMENT for ROS camera camera (non) real-time communications
-  //  if (k % (ms * 100) == 0) {
-  //    try {
-  //      Commands curr_cmd = *(command_.readFromRT());
-  //      //      std::cout << "+curr_cmd.x=" << curr_cmd.x << "\n";
-  //      p_hat_w(0) = curr_cmd.x;
-  //      p_hat_w(1) = curr_cmd.y;
-  //      p_hat_w(2) = curr_cmd.z;
-  //    } catch (int N) {
-  //      std::cout << "CANNOT hear p_hat_w!" << "\n";
-  //    }
-  //    try {
-  //      Commands2 curr_cmd2 = *(command_2_.readFromRT());
-  //      //      std::cout << "+curr_cmd2.data[0]=" << curr_cmd2.data[0] << "\n";
-  //      Eigen::Map<Eigen::Matrix<double, 4, 4>> T_o_ftc(robot_state.O_T_EE.data());
-  //      //      Eigen::Matrix4d T_o_ftc2 = T_o_F * T_F_ftc2;
-  //      for (int i = 0; i < 4; ++i) {
-  //        for (int j = 0; j < 4; ++j) {
-  //          T_ftc_ca(i, j) = curr_cmd2.data[i * 4 + j];
-  //        }
-  //      }
-  //      //            Eigen::Matrix4d T_o_ca = T_o_ftc.inverse()*T_ftc2_ftc*T_ftc_ca2;
-  //      Eigen::Matrix4d T_o_ca = T_o_ftc * T_ftc_ca;
-  //      //            Eigen::Matrix4d T_o_ca = T_ftc_ca2*T_ftc2_ftc*T_o_ftc.inverse();
-  //      Eigen::Affine3d transform_T_ca_o(T_o_ca);
-  //      Eigen::Vector3d t(transform_T_ca_o.translation());
-  //      //      Eigen::Matrix3d R(transform_T_ca_o.rotation());
-  //      Eigen::Matrix3d R = T_o_ca({0, 1, 2}, {0, 1, 2});
-  //      p_obj_o = R * p_hat_w + t + drift;
-  //      if (debug) {
-  //        std::cout << "+T_o_ftc=" << T_o_ftc << "\n";
-  //        //            std::cout << "+T_o_ftc.inverse()=" << T_o_ftc.inverse() << "\n";
-  //        //            std::cout << "+T_ftc2_ftc=" << T_ftc2_ftc << "\n";
-  //        std::cout << "+T_ftc_ca=" << T_ftc_ca << "\n";
-  //        std::cout << "+T_o_ca=" << T_o_ca << "\n";
-  //        std::cout << "+R=" << R << "\n";
-  //        std::cout << "+t=" << t << "\n";
-  //        std::cout << "+p_hat_w=" << p_hat_w << "\n";
-  //        std::cout << "+p_obj_o=" << p_obj_o << "\n";
-  //      }
-  //    } catch (int N) {
-  //      std::cout << "-CANNOT hear T_ftc_ca-" << "\n";
-  //    }
-  //  }
   if (k % ms == 0) {
-    //     TODO smooth start_up speed profile
-    double v_star_dir_length = 34.9028 / (1 + std::exp(-0.04 * (k_c - 250))) / 1000 -
-                               34.9028 / (1 + std::exp(-0.04 * (0 - 250))) / 1000;
     if (start_up == true) {
+      //     TODO smooth start_up speed profile
+      double v_star_dir_length = 34.9028 / (1 + std::exp(-0.04 * (k_c - 250))) / 1000 -
+                                 34.9028 / (1 + std::exp(-0.04 * (0 - 250))) / 1000;
       for (int i = 0; i < 3; ++i) {
         v_star[i] = v_star_dir[i] / norm_v_star_dir * v_star_dir_length;
         r_star(i) = dti1 * v_star[i] + r_star(i);
@@ -784,8 +749,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   // TODO manual motor trigger delay compensation: more robust solution required
   //    if (std::abs(e_EE_target[1]) < 0.020801 and start_up == true) {
   //  TODO improve temporary solution: due to delay manually approximated corrosponding startup
-  //  phase, trigger motor after k=500[ms]
-  if (k > 500 and start_up == true) {
+  //  phase, trigger motor after k~730[ms]
+  if (k > 730 and start_up == true) {
     //    TODO this is not necessarily is going to lock
     //    publish message to switch on the conveyor belt
     if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
@@ -797,7 +762,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   }
 
   //  end startup phase if you reach below 1 mm distance to initial condition
-  if (norm_e_EE_t < 0.002 and start_up == true) {
+  if (norm_e_EE_t < 0.001 and start_up == true) {
     if (false) {
       std::cout << "==========Warm-up ended==========" << " \n";
       std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
@@ -815,15 +780,10 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
     start_up = false;
     std::cout << "Reached end of start-up phase!" << endl;
-
     // TODO ATTENTION: initialize KF at initial position
     X_prediction_ahead = EEposition;
     estimatesAposteriori = EEposition;
-    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
-      STEPPERMOTOR_publisher_.msg_.vector.y = 1;  // send command for debugging only
-      STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
-      STEPPERMOTOR_publisher_.unlockAndPublish();
-    }
+
     //    //    TODO this is not necessarily is going to lock
     //    //    publish message to switch on the conveyor belt
     //    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
@@ -857,7 +817,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    }
     //  stop condition at end of tracking
 
-  } else if ((norm_e_EE_t < 0.003 and start_up == false)) {
+  } else if ((norm_e_EE_t < 0.005 and start_up == false)) {
     if (false) {
       std::cout << "++++++++++++++++TARGET REACHED, STOPPING+++++++++++++++" << " \n";
       std::cout << "k_c=" << k_c << " \n";
@@ -992,8 +952,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    }
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
-      //      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
-      dq_command(i) = dq_command_PID(i);
+      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
+      //      dq_command(i) = dq_command_PID(i);
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         if (true) {
@@ -1033,7 +993,6 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
         PRIMITIVE_publisher_.msg_.dq_SAC[i] = dq_SAC(i);
       }
       if (i < 3) {
-        PRIMITIVE_publisher_.msg_.r_star[i] = r_star(i);
         PRIMITIVE_publisher_.msg_.r_star[i] = r_star(i);
         PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
         PRIMITIVE_publisher_.msg_.e_mismatch[i] = e_mismatch(i);

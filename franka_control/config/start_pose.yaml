@@ -48,15 +48,15 @@
 #  $(arg arm_id)_joint6: 2.4409728082618742
 #  $(arg arm_id)_joint7: 2.2227562127823236
 
-#joint poses corrospond to r_star_tf_ftc2 = {0.5341719324165605, -0.2758445190875657, 0.14369105360211876}; manually measured upper left apriltag corner with tolerance 1 mm by my PI controller
-joint_pose:
-  $(arg arm_id)_joint1: -0.22683544711236076
-  $(arg arm_id)_joint2: 0.4152892646837951
-  $(arg arm_id)_joint3: -0.2240776697835826
-  $(arg arm_id)_joint4: -2.029656763049754
-  $(arg arm_id)_joint5: -0.1323494169192162
-  $(arg arm_id)_joint6: 2.433754967707292
-  $(arg arm_id)_joint7: 2.239142517407308
+##joint poses corrospond to r_star_tf_ftc2 = {0.5341719324165605, -0.2758445190875657, 0.14369105360211876}; manually measured upper left apriltag corner with tolerance 1 mm by my PI controller
+#joint_pose:
+#  $(arg arm_id)_joint1: -0.22683544711236076
+#  $(arg arm_id)_joint2: 0.4152892646837951
+#  $(arg arm_id)_joint3: -0.2240776697835826
+#  $(arg arm_id)_joint4: -2.029656763049754
+#  $(arg arm_id)_joint5: -0.1323494169192162
+#  $(arg arm_id)_joint6: 2.433754967707292
+#  $(arg arm_id)_joint7: 2.239142517407308
 
 ##joint poses corrospond to r_star_tf_ftc2 = {0.486437, -0.271439, 0.217004}; manually measured upper left apriltag corner with tolerance 1 mm by my PI controller
 #joint_pose:
@@ -67,6 +67,18 @@ joint_pose:
 #  $(arg arm_id)_joint5: -0.16008594
 #  $(arg arm_id)_joint6:  0.4936846
 #  $(arg arm_id)_joint7:  0.8195687449770361
+
+
+#joint poses corrospond to manual Pen measurement by ruler={{523.4,-276, 72} and raw camera estimation of the same Pen tip {523.48, −280.18, 72.37}
+#and raw camera tcp estimation of {527.88, -270.33, 135.51} so tcp after adding camera estimation offset ({-0.06, +2.99, -0.12}) is {0.52782, -267.34, 135.39}
+joint_pose:
+  $(arg arm_id)_joint1: -0.22683544711236076
+  $(arg arm_id)_joint2: 0.4152892646837951
+  $(arg arm_id)_joint3: -0.2240776697835826
+  $(arg arm_id)_joint4: -2.029656763049754
+  $(arg arm_id)_joint5: -0.1323494169192162
+  $(arg arm_id)_joint6: 2.433754967707292
+  $(arg arm_id)_joint7: 1.939142517407308
 
 
 
