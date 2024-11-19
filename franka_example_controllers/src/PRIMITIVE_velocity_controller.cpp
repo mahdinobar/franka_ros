@@ -485,6 +485,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   int ms = 1;
   //  TODO Attention on subscription rate
   if (k % (ms * 1) == 0) {
+    //    camera target measurement subscription
     try {
       Commands curr_cmd = *(command_.readFromRT());
       //      TODO Pay attention: here we correct the camere raw measurements offsets
@@ -500,6 +501,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     } catch (int N) {
       std::cout << "ERROR: CANNOT hear p_hat_w!" << "\n";
     }
+    //    camera end effector measurement subscription
     try {
       Commands curr_cmd_EE = *(command_EE_.readFromRT());
       //      TODO Pay attention: here we correct the camere raw measurements offsets
