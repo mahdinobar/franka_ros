@@ -65,7 +65,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   int k = 0;
   int delay_SAC = 0;
   int k_SAC = 0;
-  int k_c = 0;
+  int k_PID = 0;
+  int k_startup_speed_profile = 0;
   int idx_i3 = 0;
   std::array<double, 3> I_e = {0, 0, 0};
   franka_hw::TriggerRate rate_trigger_{1000.0};

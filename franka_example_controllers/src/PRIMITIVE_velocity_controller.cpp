@@ -482,43 +482,44 @@ void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
 
 void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Duration& period) {
   //  TODO change command frequency by ms
-  int ms = 1;
-  //  TODO Attention on subscription rate
-  if (k % (ms * 1) == 0) {
-    //    camera target measurement subscription
-    try {
-      Commands curr_cmd = *(command_.readFromRT());
-      //      TODO Pay attention: here we correct the camere raw measurements offsets
-      // ATTENTION: based on primitive 50 camera estimation of upper edge corner of April tag:
-      // offset is {-0.06, +2.99, -0.12};
-      p_hat_w(0) = (curr_cmd.x + 20.5 - 0.06) / 1000;
-      p_hat_w(1) = (curr_cmd.y + 25 + 2.99) / 1000;
-      p_hat_w(2) = (curr_cmd.z + 39 - 0.12) / 1000;
-      // TODO
-      double t_measurement = curr_cmd.t_stamp_camera_measurement;
-      dt = (t_measurement - t_0) * 1000;  //[ms]
-      t_0 = t_measurement;
-    } catch (int N) {
-      std::cout << "ERROR: CANNOT hear p_hat_w!" << "\n";
-    }
-    //    camera end effector measurement subscription
-    try {
-      Commands curr_cmd_EE = *(command_EE_.readFromRT());
-      //      TODO Pay attention: here we correct the camere raw measurements offsets
-      // ATTENTION: based on primitive 50 camera estimation of upper edge corner of April tag:
-      // offset is {-0.06, +2.99, -0.12};
-      p_hat_EE_w(0) = (curr_cmd_EE.x - 0.06) / 1000;
-      p_hat_EE_w(1) = (curr_cmd_EE.y + 2.99) / 1000;
-      p_hat_EE_w(2) = (curr_cmd_EE.z - 0.12) / 1000;
-      // TODO
-      double t_measurement_EE = curr_cmd_EE.t_stamp_camera_measurement;
-      dt_EE = (t_measurement_EE - t_0_EE) * 1000;  //[ms]
-      t_0_EE = t_measurement_EE;
-    } catch (int N) {
-      std::cout << "ERROR: CANNOT hear p_hat_EE_w!" << "\n";
-    }
+  // [Hz] this is for SAC and PI controller commands
+  int freq = 10;
+  // [Hz] this is for KF+target stars at startup +PI controller feedback inputs
+  int freq_fast = 1000;
+  //    camera target measurement subscription
+  try {
+    Commands curr_cmd = *(command_.readFromRT());
+    //      TODO Pay attention: here we correct the camere raw measurements offsets
+    // ATTENTION: based on primitive 50 camera estimation of upper edge corner of April tag:
+    // offset is {-0.06, +2.99, -0.12};
+    p_hat_w(0) = (curr_cmd.x + 20.5 - 0.06) / 1000;
+    p_hat_w(1) = (curr_cmd.y + 25 + 2.99) / 1000;
+    p_hat_w(2) = (curr_cmd.z + 39 - 0.12) / 1000;
+    // TODO
+    double t_measurement = curr_cmd.t_stamp_camera_measurement;
+    dt = (t_measurement - t_0) * 1000;  //[ms]
+    t_0 = t_measurement;
+  } catch (int N) {
+    std::cout << "ERROR: CANNOT hear p_hat_w!" << "\n";
   }
-  double dti1 = 0.001 * ms;
+  //    camera end effector measurement subscription
+  try {
+    Commands curr_cmd_EE = *(command_EE_.readFromRT());
+    //      TODO Pay attention: here we correct the camere raw measurements offsets
+    // ATTENTION: based on primitive 50 camera estimation of upper edge corner of April tag:
+    // offset is {-0.06, +2.99, -0.12};
+    p_hat_EE_w(0) = (curr_cmd_EE.x - 0.06) / 1000;
+    p_hat_EE_w(1) = (curr_cmd_EE.y + 2.99) / 1000;
+    p_hat_EE_w(2) = (curr_cmd_EE.z - 0.12) / 1000;
+    // TODO
+    double t_measurement_EE = curr_cmd_EE.t_stamp_camera_measurement;
+    dt_EE = (t_measurement_EE - t_0_EE) * 1000;  //[ms]
+    t_0_EE = t_measurement_EE;
+  } catch (int N) {
+    std::cout << "ERROR: CANNOT hear p_hat_EE_w!" << "\n";
+  }
+
+  double dti1 = 0.001 * (1000 / freq_fast);
   //  //    TODO check joints_pose_ updates and i.c. is correct
   //  for (size_t i = 0; i < 7; ++i) {
   //    joints_pose_[i] = velocity_joint_handles_[i].getPosition();
@@ -543,195 +544,202 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> tau_J(robot_state.tau_J.data());
-  if (k % ms == 0) {
-    if (start_up == true) {
-      //     TODO smooth start_up speed profile
-      double v_star_dir_length = 34.9028 / (1 + std::exp(-0.04 * (k_c - 250))) / 1000 -
-                                 34.9028 / (1 + std::exp(-0.04 * (0 - 250))) / 1000;
-      for (int i = 0; i < 3; ++i) {
-        v_star[i] = v_star_dir[i] / norm_v_star_dir * v_star_dir_length;
-        r_star(i) = dti1 * v_star[i] + r_star(i);
-      }
-    } else if (start_up == false) {
-      //  TODO how can you make KF conditions especially initially more efficient?
-      if (received_measurement == true and dt > 0) {
-        if (MODEL_0) {
-          B(1) = dt;  //[ms]
-          estimatesApriori = A * estimatesAposteriori + B * u;
-          covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
-          Eigen::Matrix<double, 3, 3> Sk;
-          Sk = R + C * covarianceApriori * (C.transpose());
-          Sk = Sk.inverse();
-          gainMatrices = covarianceApriori * (C.transpose()) * Sk;
-          estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
-          if (false) {
-            cout << "&&&&&&&&&&&&&&&&&&&&&&&&" << estimatesApriori << endl;
-            cout << "estimatesApriori=" << estimatesApriori << endl;
-            cout << "gainMatrices=" << gainMatrices << endl;
-            cout << "p_hat_w=" << p_hat_w << endl;
-            cout << "C=" << C << endl;
-            cout << "estimatesApriori=" << estimatesApriori << endl;
-            cout << "estimatesAposteriori=" << estimatesAposteriori << endl;
-          }
-          Eigen::MatrixXd In;
-          In = Eigen::MatrixXd::Identity(3, 3);
-          Eigen::MatrixXd IminusKC;
-          IminusKC.resize(3, 3);
-          IminusKC = In - gainMatrices * C;  // I-KC
-          covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
-                                  gainMatrices * R * (gainMatrices.transpose());
-          X_prediction_ahead = estimatesAposteriori;
-          received_measurement = false;
-        }
-        if (MODEL_1) {
-          A(0, 3) = dt;  //[ms]
-          A(1, 4) = dt;  //[ms]
-          A(2, 5) = dt;  //[ms]
-          estimatesApriori = A * estimatesAposteriori + B * u;
-          covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
-          Eigen::Matrix<double, 3, 3> Sk;
-          Sk = R + C * covarianceApriori * (C.transpose());
-          Sk = Sk.inverse();
-          gainMatrices = covarianceApriori * (C.transpose()) * Sk;
-          estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
-          Eigen::MatrixXd In;
-          In = Eigen::MatrixXd::Identity(6, 6);
-          Eigen::MatrixXd IminusKC;
-          IminusKC.resize(6, 6);
-          IminusKC = In - gainMatrices * C;  // I-KC
-          covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
-                                  gainMatrices * R * (gainMatrices.transpose());
-          X_prediction_ahead = estimatesAposteriori;
-          received_measurement = false;
-        }
-        if (MODEL_2) {
-          //          std::random_device rd{};
-          //          std::mt19937 gen{rd()};
-          //          std::normal_distribution<double> d{0.0349, 0.000050776};
-          std::random_device rd{};
-          std::mt19937 gen{rd()};
-          std::normal_distribution<double> gauss_dist{u_mean, u_std};
-          u(0, 0) = gauss_dist(gen);
-          //          cout << "u(0, 0)=" << u(0, 0) << endl;
-          B(1) = dt;  //[ms]
-          estimatesApriori = A * estimatesAposteriori + B * u;
-          covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
-          Eigen::Matrix<double, 3, 3> Sk;
-          Sk = R + C * covarianceApriori * (C.transpose());
-          Sk = Sk.inverse();
-          gainMatrices = covarianceApriori * (C.transpose()) * Sk;
-          estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
-          Eigen::MatrixXd In;
-          In = Eigen::MatrixXd::Identity(3, 3);
-          Eigen::MatrixXd IminusKC;
-          IminusKC.resize(3, 3);
-          IminusKC = In - gainMatrices * C;  // I-KC
-          covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
-                                  gainMatrices * R * (gainMatrices.transpose());
-          X_prediction_ahead = estimatesAposteriori;
-          received_measurement = false;
-        }
-      } else {
-        if (MODEL_0) {
-          B(1) = 1 * ms;  //[ms]
-          X_prediction_ahead = A * X_prediction_ahead + B * u;
-        }
-        if (MODEL_1) {
-          A(0, 3) = 1 * ms;  //[ms]
-          A(1, 4) = 1 * ms;  //[ms]
-          A(2, 5) = 1 * ms;  //[ms]
-          X_prediction_ahead = A * X_prediction_ahead + B * u;
-        }
-        if (MODEL_2) {
-          std::random_device rd{};
-          std::mt19937 gen{rd()};
-          std::normal_distribution<double> gauss_dist{u_mean, u_std};
-          u(0, 0) = gauss_dist(gen);
-          //          cout << "u(0, 0)=" << u(0, 0) << endl;
-          B(1) = 1 * ms;  //[ms] //TODO ATTENTION
-          X_prediction_ahead = A * X_prediction_ahead + B * u;
-        }
-      }
-
+  if (start_up == true) {
+    //     TODO smooth start_up speed profile
+    double v_star_dir_length =
+        34.9028 / (1 + std::exp(-0.04 * (k_startup_speed_profile - 250))) / 1000 -
+        34.9028 / (1 + std::exp(-0.04 * (0 - 250))) / 1000;
+    for (int i = 0; i < 3; ++i) {
+      v_star[i] = v_star_dir[i] / norm_v_star_dir * v_star_dir_length;
+      r_star(i) = dti1 * v_star[i] + r_star(i);
+    }
+  } else if (start_up == false) {
+    //  TODO how can you make KF conditions especially initially more efficient?
+    if (received_measurement == true and dt > 0) {
       if (MODEL_0) {
-        v_star[0] = 0;
-        // ATTENTION to dimension
-        v_star[1] = 0.0341;  //[m/s]
-        v_star[2] = 0;
-        r_star(0) = X_prediction_ahead(0);
-        r_star(1) = X_prediction_ahead(1);
-        r_star(2) = X_prediction_ahead(2);
+        B(1) = dt;  //[ms]
+        estimatesApriori = A * estimatesAposteriori + B * u;
+        covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
+        Eigen::Matrix<double, 3, 3> Sk;
+        Sk = R + C * covarianceApriori * (C.transpose());
+        Sk = Sk.inverse();
+        gainMatrices = covarianceApriori * (C.transpose()) * Sk;
+        estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
+        if (false) {
+          cout << "&&&&&&&&&&&&&&&&&&&&&&&&" << estimatesApriori << endl;
+          cout << "estimatesApriori=" << estimatesApriori << endl;
+          cout << "gainMatrices=" << gainMatrices << endl;
+          cout << "p_hat_w=" << p_hat_w << endl;
+          cout << "C=" << C << endl;
+          cout << "estimatesApriori=" << estimatesApriori << endl;
+          cout << "estimatesAposteriori=" << estimatesAposteriori << endl;
+        }
+        Eigen::MatrixXd In;
+        In = Eigen::MatrixXd::Identity(3, 3);
+        Eigen::MatrixXd IminusKC;
+        IminusKC.resize(3, 3);
+        IminusKC = In - gainMatrices * C;  // I-KC
+        covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
+                                gainMatrices * R * (gainMatrices.transpose());
+        X_prediction_ahead = estimatesAposteriori;
+        received_measurement = false;
       }
       if (MODEL_1) {
-        r_star(0) = X_prediction_ahead(0);
-        r_star(1) = X_prediction_ahead(1);
-        r_star(2) = X_prediction_ahead(2);
-        v_star[0] = X_prediction_ahead(3) * 1000;
-        v_star[1] = X_prediction_ahead(4) * 1000;
-        v_star[2] = X_prediction_ahead(5) * 1000;
+        A(0, 3) = dt;  //[ms]
+        A(1, 4) = dt;  //[ms]
+        A(2, 5) = dt;  //[ms]
+        estimatesApriori = A * estimatesAposteriori + B * u;
+        covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
+        Eigen::Matrix<double, 3, 3> Sk;
+        Sk = R + C * covarianceApriori * (C.transpose());
+        Sk = Sk.inverse();
+        gainMatrices = covarianceApriori * (C.transpose()) * Sk;
+        estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
+        Eigen::MatrixXd In;
+        In = Eigen::MatrixXd::Identity(6, 6);
+        Eigen::MatrixXd IminusKC;
+        IminusKC.resize(6, 6);
+        IminusKC = In - gainMatrices * C;  // I-KC
+        covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
+                                gainMatrices * R * (gainMatrices.transpose());
+        X_prediction_ahead = estimatesAposteriori;
+        received_measurement = false;
       }
       if (MODEL_2) {
-        r_star(0) = X_prediction_ahead(0);
-        r_star(1) = X_prediction_ahead(1);
-        r_star(2) = X_prediction_ahead(2);
-        v_star[0] = 0;
-        v_star[1] = u(0, 0) * 1000;  //[m/s]
-        v_star[2] = 0;
+        //          std::random_device rd{};
+        //          std::mt19937 gen{rd()};
+        //          std::normal_distribution<double> d{0.0349, 0.000050776};
+        std::random_device rd{};
+        std::mt19937 gen{rd()};
+        std::normal_distribution<double> gauss_dist{u_mean, u_std};
+        u(0, 0) = gauss_dist(gen);
+        //          cout << "u(0, 0)=" << u(0, 0) << endl;
+        B(1) = dt;  //[ms]
+        estimatesApriori = A * estimatesAposteriori + B * u;
+        covarianceApriori = A * covarianceAposteriori * (A.transpose()) + Q;
+        Eigen::Matrix<double, 3, 3> Sk;
+        Sk = R + C * covarianceApriori * (C.transpose());
+        Sk = Sk.inverse();
+        gainMatrices = covarianceApriori * (C.transpose()) * Sk;
+        estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
+        Eigen::MatrixXd In;
+        In = Eigen::MatrixXd::Identity(3, 3);
+        Eigen::MatrixXd IminusKC;
+        IminusKC.resize(3, 3);
+        IminusKC = In - gainMatrices * C;  // I-KC
+        covarianceAposteriori = IminusKC * covarianceApriori * (IminusKC.transpose()) +
+                                gainMatrices * R * (gainMatrices.transpose());
+        X_prediction_ahead = estimatesAposteriori;
+        received_measurement = false;
+      }
+    } else {
+      if (MODEL_0) {
+        B(1) = 1 * (1000 / freq_fast);  //[ms]
+        X_prediction_ahead = A * X_prediction_ahead + B * u;
+      }
+      if (MODEL_1) {
+        A(0, 3) = 1 * (1000 / freq_fast);  //[ms]
+        A(1, 4) = 1 * (1000 / freq_fast);  //[ms]
+        A(2, 5) = 1 * (1000 / freq_fast);  //[ms]
+        X_prediction_ahead = A * X_prediction_ahead + B * u;
+      }
+      if (MODEL_2) {
+        std::random_device rd{};
+        std::mt19937 gen{rd()};
+        std::normal_distribution<double> gauss_dist{u_mean, u_std};
+        u(0, 0) = gauss_dist(gen);
+        //          cout << "u(0, 0)=" << u(0, 0) << endl;
+        B(1) = 1 * (1000 / freq_fast);  //[ms] //TODO ATTENTION
+        X_prediction_ahead = A * X_prediction_ahead + B * u;
       }
     }
-    std::array<double, 42> jacobian_array =
-        model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-    Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
-    //    std::cout << "-----Jacobian matrix:\n" << jacobian << std::endl;
-    //    std::cout << "-----EEposition:\n" << EEposition << std::endl;
-    std::vector<int> ind_translational_jacobian{0, 1, 2};
-    std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
-    Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
-    //    if (k % 2000 == 0) {
-    //      cout << "+++J_translation=" << J_translation << "\n";
-    //    }
-    Eigen::MatrixXd J_translation_pinv;
-    e_t[0] = (-r_star(0) + EEposition(0));
-    e_t[1] = (-r_star(1) + EEposition(1));
-    e_t[2] = (-r_star(2) + EEposition(2));
-    Eigen::Vector<double, 3> vc;
-    for (int i = 0; i < 3; ++i) {
-      // ATTENTION to dimenstion
-      I_e[i] += -e_t[i] * dti1;  // in [m/s] because jacobian is in m to rad and dq are in rad/sec
-      vc(i) = v_star[i] + K_p * (-e_t[i]) +
-              K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*dti1 + K_d*(v_ref-v_e)
-    }
-    pseudoInverse(J_translation, J_translation_pinv);
-    dq_command_PID = J_translation_pinv * vc;
 
-    //  TODO should k_c be updated here or end of call?
-    k_c += 1;  // k_c is used for the start_up phase speed profile only
-    if (false) {
-      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-        for (size_t i = 0; i < 42; ++i) {
-          PRIMITIVE_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
-        }
-        PRIMITIVE_publisher_.unlockAndPublish();
-      }
-      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-        for (size_t i = 0; i < 6; ++i) {
-          for (size_t j = 0; i < 7; ++j) {
-            PRIMITIVE_publisher_.msg_.jacobian[i] = jacobian(i, j);
-          }
-        }
-        PRIMITIVE_publisher_.unlockAndPublish();
-      }
-      if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-        for (size_t i = 0; i < 3; ++i) {
-          for (size_t j = 0; j < 7; ++j) {
-            PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
-            PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] = J_translation_pinv(i, j);
-          }
-        }
-        PRIMITIVE_publisher_.unlockAndPublish();
-      }
+    if (MODEL_0) {
+      v_star[0] = 0;
+      // ATTENTION to dimension
+      v_star[1] = 0.0341;  //[m/s]
+      v_star[2] = 0;
+      r_star(0) = X_prediction_ahead(0);
+      r_star(1) = X_prediction_ahead(1);
+      r_star(2) = X_prediction_ahead(2);
+    }
+    if (MODEL_1) {
+      r_star(0) = X_prediction_ahead(0);
+      r_star(1) = X_prediction_ahead(1);
+      r_star(2) = X_prediction_ahead(2);
+      v_star[0] = X_prediction_ahead(3) * 1000;
+      v_star[1] = X_prediction_ahead(4) * 1000;
+      v_star[2] = X_prediction_ahead(5) * 1000;
+    }
+    if (MODEL_2) {
+      r_star(0) = X_prediction_ahead(0);
+      r_star(1) = X_prediction_ahead(1);
+      r_star(2) = X_prediction_ahead(2);
+      v_star[0] = 0;
+      v_star[1] = u(0, 0) * 1000;  //[m/s]
+      v_star[2] = 0;
     }
   }
+  std::array<double, 42> jacobian_array =
+      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
+  //    std::cout << "-----Jacobian matrix:\n" << jacobian << std::endl;
+  //    std::cout << "-----EEposition:\n" << EEposition << std::endl;
+  std::vector<int> ind_translational_jacobian{0, 1, 2};
+  std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
+  Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
+  //    if (k % 2000 == 0) {
+  //      cout << "+++J_translation=" << J_translation << "\n";
+  //    }
+  Eigen::MatrixXd J_translation_pinv;
+  e_t[0] = (-r_star(0) + EEposition(0));
+  e_t[1] = (-r_star(1) + EEposition(1));
+  e_t[2] = (-r_star(2) + EEposition(2));
+  Eigen::Vector<double, 3> vc;
+  for (int i = 0; i < 3; ++i) {
+    // ATTENTION to dimenstion
+    I_e[i] += -e_t[i] * dti1;  // in [m/s] because jacobian is in m to rad and dq are in rad/sec
+    vc(i) = v_star[i] + K_p * (-e_t[i]) +
+            K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*dti1 + K_d*(v_ref-v_e)
+  }
+  pseudoInverse(J_translation, J_translation_pinv);
+  if (start_up == true) {
+    dq_command_PID = J_translation_pinv * vc;
+  } else if (start_up == false) {
+    if (k_PID % (1000 / freq) == 0) {
+      dq_command_PID = J_translation_pinv * vc;
+    }
+    k_PID += 1;
+  }
+
+  //  TODO should k_startup_speed_profile be updated here or end of call?
+  k_startup_speed_profile += 1;  // k_startup_speed_profile for the start_up phase speed profile
+  if (false) {
+    if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+      for (size_t i = 0; i < 42; ++i) {
+        PRIMITIVE_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
+      }
+      PRIMITIVE_publisher_.unlockAndPublish();
+    }
+    if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+      for (size_t i = 0; i < 6; ++i) {
+        for (size_t j = 0; i < 7; ++j) {
+          PRIMITIVE_publisher_.msg_.jacobian[i] = jacobian(i, j);
+        }
+      }
+      PRIMITIVE_publisher_.unlockAndPublish();
+    }
+    if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+      for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 7; ++j) {
+          PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
+          PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] = J_translation_pinv(i, j);
+        }
+      }
+      PRIMITIVE_publisher_.unlockAndPublish();
+    }
+  }
+
   if (start_up == true) {
     e_EE_target[0] = (r_star_tf_start_up(0) - EEposition(0));
     e_EE_target[1] = (r_star_tf_start_up(1) - EEposition(1));
@@ -778,7 +786,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
     if (false) {
       std::cout << "k=" << k << " \n";
-      std::cout << "k_c=" << k_c << " \n";
+      std::cout << "k_startup_speed_profile=" << k_startup_speed_profile << " \n";
     }
     start_up = false;
     std::cout << "Reached end of start-up phase!" << endl;
@@ -822,7 +830,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   } else if ((norm_e_EE_t < 0.005 and start_up == false)) {
     if (false) {
       std::cout << "++++++++++++++++TARGET REACHED, STOPPING+++++++++++++++" << " \n";
-      std::cout << "k_c=" << k_c << " \n";
+      std::cout << "k_startup_speed_profile=" << k_startup_speed_profile << " \n";
       std::cout << "k=" << k << " \n";
       std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
       std::cout << "EEposition=\n";
@@ -835,7 +843,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
     PRIMITIVEVelocityController::stopRequest(ros::Time::now());
   } else {
-    if (k_SAC % 100 == 0 and start_up == false) {
+    if (k_SAC % (1000 / freq) == 0 and start_up == false) {
       // Directly access obs data pointer to modify values without reallocation
       double* obs_data = obs.data_ptr<double>();
       obs_data[0] = e_t.at(0);
@@ -906,11 +914,6 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     if (start_up == false) {
       k_SAC += 1;  // TODO ATTENTION: should be after if condition of SAC after startup phase (check
                    // concept)
-      if (false) {
-        std::cout << "k=" << k << "\n";
-        std::cout << "k_SAC=" << k_SAC << "\n";
-        std::cout << "dq_SAC=" << dq_SAC << "\n";
-      }
     }
     if (false) {
       std::cout << "==================================" << " \n";
@@ -965,6 +968,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           std::cout << "dq_SAC(i)" << dq_SAC(i) << "\n";
           std::cout << "dq_command_PID(i)" << dq_command_PID(i) << "\n";
           std::cout << "norm_e_EE_t=" << norm_e_EE_t << "\n";
+          std::cout << "k_SAC=" << k_SAC << "\n";
+          std::cout << "k_PID=" << k_PID << "\n";
           std::cout << "k=" << k << "\n";
         }
         if (std::signbit(dq_command(i))) {
