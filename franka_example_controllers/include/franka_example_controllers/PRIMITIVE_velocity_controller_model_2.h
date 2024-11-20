@@ -171,7 +171,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::Vector3d EEposition_kinematics{0, 0, 0};
   Eigen::Vector3d EEposition{0, 0, 0};
   bool received_measurement_EE = false;
-  double K_mismatch = 0.1;
+  double K_mismatch = 0.2;
 
   double K_p = 5;
   double K_i = 0.5;
