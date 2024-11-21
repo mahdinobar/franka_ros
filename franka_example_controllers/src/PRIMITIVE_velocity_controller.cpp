@@ -826,7 +826,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
       STEPPERMOTOR_publisher_.unlockAndPublish();
     }
-    if (k = 730) {
+    if (k = 720) {
       std::cout << "Triggered stepper motor sooner!" << endl;
     }
   }
@@ -834,19 +834,15 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //  end startup phase if you reach below 1 mm distance to initial condition
   if (norm_e_EE_t < 0.001 and start_up == true) {
     if (false) {
-      std::cout << "==========Warm-up ended==========" << " \n";
+      std::cout << "==========Start-up ended==========" << " \n";
       std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
       std::cout << "EEposition=\n";
-    }
-    if (false) {
       for (int i = 0; i < 3; i++) {
         std::cout << EEposition(i) << " ";
         std::cout << std::endl;
+        std::cout << "k=" << k << " \n";
+        std::cout << "k_startup_speed_profile=" << k_startup_speed_profile << " \n";
       }
-    }
-    if (false) {
-      std::cout << "k=" << k << " \n";
-      std::cout << "k_startup_speed_profile=" << k_startup_speed_profile << " \n";
     }
     start_up = false;
     std::cout << "Reached end of start-up phase!" << endl;
