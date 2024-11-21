@@ -71,6 +71,7 @@
 
 #joint poses corrospond to manual Pen measurement by ruler={{523.4,-276, 72} and raw camera estimation of the same Pen tip {523.48, −280.18, 72.37}
 #and raw camera tcp estimation of {527.88, -270.33, 135.51} so tcp after adding camera estimation offset ({-0.06, +2.99, -0.12}) is {0.52782, -267.34, 135.39}
+# and high fidelity(franka_description) kinematics tcp EE position at (0.534549 ,-0.274168,0.144084)[m]
 joint_pose:
   $(arg arm_id)_joint1: -0.22683544711236076
   $(arg arm_id)_joint2: 0.4152892646837951

@@ -29,6 +29,13 @@
 #include <torch/script.h>
 #include <torch/torch.h>
 
+#include <pinocchio/algorithm/frames.hpp>
+#include <pinocchio/fwd.hpp>
+#include <pinocchio/parsers/urdf.hpp>
+#include "pinocchio/algorithm/jacobian.hpp"
+#include "pinocchio/algorithm/joint-configuration.hpp"
+#include "pinocchio/algorithm/kinematics.hpp"
+
 namespace franka_example_controllers {
 
 class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceController<
@@ -93,7 +100,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   //  Eigen::Matrix<double, 3, 1> r_star_0 = {0.5341719324165605, -0.2758445190875657,
   //  0.14369105360211876};
 //  Eigen::Matrix<double, 3, 1> r_star_0 = {0.53106, -0.261387, 0.13763};
-  Eigen::Matrix<double, 3, 1> r_star_0 = {0.52782, -0.26734, 0.13539};
+//  Eigen::Matrix<double, 3, 1> r_star_0 = {0.52782, -0.26734, 0.13539};
+  Eigen::Matrix<double, 3, 1> r_star_0 = {0.5345, -0.2741, 0.1441};
   Eigen::Matrix<double, 3, 1> r_star = r_star_0;
   Eigen::Matrix<double, 7, 1> dq_command_PID = {0, 0, 0, 0, 0, 0, 0};
   Eigen::Matrix<double, 7, 1> dq_command = {0, 0, 0, 0, 0, 0, 0};
@@ -173,7 +181,13 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   bool received_measurement_EE = false;
   double K_mismatch = 0.2;
 
+  pinocchio::Model model_pino_biased;
+
+
+
+
   double K_p = 5;
   double K_i = 0.5;
 };
+
 }  // namespace franka_example_controllers

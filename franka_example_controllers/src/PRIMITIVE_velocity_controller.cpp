@@ -232,6 +232,12 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   std::cout << "model name: " << model.name << std::endl;
   // Create data required by the algorithms
   pinocchio::Data data(model);
+
+  const std::string urdf_filename_biased = std::string(
+      "/home/mahdi/catkin_ws/src/franka_ros/franka_description/robots/panda/"
+      "panda_corrected_Nosc_biased_1.urdf");
+  pinocchio::urdf::buildModel(urdf_filename_biased, model_pino_biased);
+
   // Sample a random configuration
   //  Eigen::VectorXd qtest = randomConfiguration(model);
   //  Eigen::VectorXd qtest = {                           -0.24160292308450512,
@@ -301,13 +307,13 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   //                                    0,
   //                                    0};
   //  config_4
-  Eigen::Vector<double, 9> qtest = {0.8141299843864857,
-                                    0.395708563373378,
-                                    -0.5666434194037389,
-                                    -2.217901490830539,
-                                    0.33094864953125036,
-                                    2.5379558763239114,
-                                    2.3507009533801324,
+  Eigen::Vector<double, 9> qtest = {-0.22683544711236076,
+                                    0.4152892646837951,
+                                    -0.2240776697835826,
+                                    -2.029656763049754,
+                                    -0.1323494169192162,
+                                    2.433754967707292,
+                                    1.939142517407308,
                                     0,
                                     0};
   std::cout << "qtest: " << qtest.transpose() << std::endl;
@@ -417,7 +423,6 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   }
   cout << "////////////////////////////////////////////////" << endl;
 
-  cout << "************************************************" << endl;
   for (size_t frame_id = 0; frame_id < model.frames.size(); ++frame_id) {
     const auto& frame = model.frames[frame_id];
     std::cout << "Frame Name: " << frame.name << ", Frame ID: " << frame_id << std::endl;
@@ -431,6 +436,17 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
     //    Eigen::MatrixXd translational_jacobian = jacobian.topRows(3);
     std::cout << "Jacobian for " << frame.name << ":\n" << jacobian << std::endl;
   }
+
+  cout << "************************************************" << endl;
+  const auto& frame = model.frames[26];
+  // Compute Jacobian for the frame
+  Eigen::MatrixXd jacobian(6, model.nv);
+  pinocchio::computeFrameJacobian(model, data, qtest, 26,
+                                  pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED, jacobian);
+  //  Eigen::MatrixXd translational_jacobian = jacobian.topRows(3);
+  Eigen::MatrixXd translational_jacobian = jacobian.block(0, 0, 3, 7);
+  std::cout << "URDF Pinocchio translational_jacobian (3x7)=\n"
+            << translational_jacobian << std::endl;
   cout << "************************************************" << endl;
 
   return true;
@@ -539,7 +555,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     received_measurement_EE = false;
   }
   //  }
-  EEposition = EEposition_kinematics + e_mismatch;
+  //  EEposition = EEposition_kinematics + e_mismatch;
+  EEposition = EEposition_kinematics;
 
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
@@ -680,17 +697,31 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       v_star[2] = 0;
     }
   }
-  std::array<double, 42> jacobian_array =
-      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-  Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
-  //    std::cout << "-----Jacobian matrix:\n" << jacobian << std::endl;
-  //    std::cout << "-----EEposition:\n" << EEposition << std::endl;
-  std::vector<int> ind_translational_jacobian{0, 1, 2};
-  std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
-  Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
-  //    if (k % 2000 == 0) {
-  //      cout << "+++J_translation=" << J_translation << "\n";
-  //    }
+
+  if (false) {
+    if (k % 100 == 0) {
+      cout << "************************************************" << endl;
+      std::cout << "model_pino_biased name: " << model_pino_biased.name << std::endl;
+      // Create data required by the algorithms
+      pinocchio::Data data_pino(model_pino_biased);
+      const auto& frame = model_pino_biased.frames[26];
+      // Compute Jacobian for the frame
+      Eigen::MatrixXd jacobian_tmp(6, model_pino_biased.nv);
+      Eigen::Matrix<double, 9, 1> q_extended;
+      // Copy the original 7 elements
+      q_extended.head<7>() = q;
+      // Add two zero rows at the end
+      q_extended.tail<2>().setZero();
+      pinocchio::computeFrameJacobian(model_pino_biased, data_pino, q_extended, 26,
+                                      pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED, jacobian_tmp);
+      //  Eigen::MatrixXd J_translation_biased = jacobian.topRows(3);
+      Eigen::MatrixXd J_translation_biased = jacobian_tmp.block(0, 0, 3, 7);
+      std::cout << "URDF Pinocchio J_translation_biased (3x7)=\n"
+                << J_translation_biased << std::endl;
+      cout << "************************************************" << endl;
+    }
+  }
+
   Eigen::MatrixXd J_translation_pinv;
   e_t[0] = (-r_star(0) + EEposition(0));
   e_t[1] = (-r_star(1) + EEposition(1));
@@ -702,11 +733,38 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     vc(i) = v_star[i] + K_p * (-e_t[i]) +
             K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*dti1 + K_d*(v_ref-v_e)
   }
+
+  std::array<double, 42> jacobian_array =
+      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
+  //    std::cout << "-----Jacobian matrix:\n" << jacobian << std::endl;
+  //    std::cout << "-----EEposition:\n" << EEposition << std::endl;
+  std::vector<int> ind_translational_jacobian{0, 1, 2};
+  std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
+  Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
+
   pseudoInverse(J_translation, J_translation_pinv);
+
   if (start_up == true) {
     dq_command_PID = J_translation_pinv * vc;
   } else if (start_up == false) {
     if (k_PID % (1000 / freq) == 0) {
+      pinocchio::Data data_pino(model_pino_biased);
+      const auto& frame = model_pino_biased.frames[26];
+      // Compute Jacobian for the frame
+      Eigen::MatrixXd jacobian_tmp(6, model_pino_biased.nv);
+      Eigen::Matrix<double, 9, 1> q_extended;
+      // Copy the original 7 elements
+      q_extended.head<7>() = q;
+      // Add two zero rows at the end
+      q_extended.tail<2>().setZero();
+      pinocchio::computeFrameJacobian(model_pino_biased, data_pino, q_extended, 26,
+                                      pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED, jacobian_tmp);
+      //  Eigen::MatrixXd J_translation_biased = jacobian.topRows(3);
+      Eigen::MatrixXd J_translation_biased = jacobian_tmp.block(0, 0, 3, 7);
+
+      pseudoInverse(J_translation_biased, J_translation_pinv);
+
       dq_command_PID = J_translation_pinv * vc;
     }
     k_PID += 1;
@@ -760,7 +818,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //    if (std::abs(e_EE_target[1]) < 0.020801 and start_up == true) {
   //  TODO improve temporary solution: due to delay manually approximated corrosponding startup
   //  phase, trigger motor after k~730[ms]
-  if (k > 730 and start_up == true) {
+  if (k > 720 and start_up == true) {
     //    TODO this is not necessarily is going to lock
     //    publish message to switch on the conveyor belt
     if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
@@ -768,7 +826,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
       STEPPERMOTOR_publisher_.unlockAndPublish();
     }
-    std::cout << "Triggered stepper motor sooner!" << endl;
+    if (k = 730) {
+      std::cout << "Triggered stepper motor sooner!" << endl;
+    }
   }
 
   //  end startup phase if you reach below 1 mm distance to initial condition
@@ -957,8 +1017,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    }
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
-      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
-      //      dq_command(i) = dq_command_PID(i);
+      //      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
+      dq_command(i) = dq_command_PID(i);
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         if (true) {
@@ -983,8 +1043,12 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
   }
   if (false) {
-    std::cout << "EEposition=" << EEposition << " \n";
-    std::cout << "q=" << q << " \n";
+    if (k % 1000 == 0) {
+      cout << "+++++++++++++++++k=" << k << "\n";
+      cout << "J_translation=" << J_translation << "\n";
+      std::cout << "q=" << q << " \n";
+      std::cout << "EEposition=" << EEposition << " \n";
+    }
   }
   k += 1;
   //  TODO can this publish be moved just after command? or more efficiently publish?
