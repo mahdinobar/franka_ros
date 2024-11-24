@@ -717,8 +717,6 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
   }
 
-
-
   if (start_up == true) {
     Eigen::MatrixXd J_translation_pinv;
     e_t[0] = (-r_star(0) + EEposition(0));
@@ -753,7 +751,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       Eigen::Vector<double, 3> vc;
       for (int i = 0; i < 3; ++i) {
         // ATTENTION to dimenstion
-        I_e[i] += -e_t[i] / freq_PID;  // in [m/s] because jacobian is in m to rad and dq are in rad/sec
+        I_e[i] +=
+            -e_t[i] / freq_PID;  // in [m/s] because jacobian is in m to rad and dq are in rad/sec
         vc(i) = v_star[i] + K_p * (-e_t[i]) +
                 K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)/ freq_PID + K_d*(v_ref-v_e)
       }
@@ -1032,8 +1031,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    }
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
-      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
-      //      dq_command(i) = dq_command_PID(i);
+      //      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
+      dq_command(i) = dq_command_PID(i);
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         if (true) {
