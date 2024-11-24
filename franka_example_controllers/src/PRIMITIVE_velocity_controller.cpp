@@ -497,11 +497,6 @@ void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
 }
 
 void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Duration& period) {
-  //  TODO change command frequency by ms
-  // [Hz] this is for SAC and PI controller commands
-  int freq = 10;
-  // [Hz] this is for KF+target stars at startup +PI controller feedback inputs
-  int freq_fast = 1000;
   //    camera target measurement subscription
   try {
     Commands curr_cmd = *(command_.readFromRT());
@@ -722,33 +717,56 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
   }
 
-  Eigen::MatrixXd J_translation_pinv;
-  e_t[0] = (-r_star(0) + EEposition(0));
-  e_t[1] = (-r_star(1) + EEposition(1));
-  e_t[2] = (-r_star(2) + EEposition(2));
-  Eigen::Vector<double, 3> vc;
-  for (int i = 0; i < 3; ++i) {
-    // ATTENTION to dimenstion
-    I_e[i] += -e_t[i] * dti1;  // in [m/s] because jacobian is in m to rad and dq are in rad/sec
-    vc(i) = v_star[i] + K_p * (-e_t[i]) +
-            K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*dti1 + K_d*(v_ref-v_e)
-  }
 
-  std::array<double, 42> jacobian_array =
-      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-  Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
-  //    std::cout << "-----Jacobian matrix:\n" << jacobian << std::endl;
-  //    std::cout << "-----EEposition:\n" << EEposition << std::endl;
-  std::vector<int> ind_translational_jacobian{0, 1, 2};
-  std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
-  Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
-
-  pseudoInverse(J_translation, J_translation_pinv);
 
   if (start_up == true) {
+    Eigen::MatrixXd J_translation_pinv;
+    e_t[0] = (-r_star(0) + EEposition(0));
+    e_t[1] = (-r_star(1) + EEposition(1));
+    e_t[2] = (-r_star(2) + EEposition(2));
+    Eigen::Vector<double, 3> vc;
+    for (int i = 0; i < 3; ++i) {
+      // ATTENTION to dimenstion
+      I_e[i] += -e_t[i] * dti1;  // in [m/s] because jacobian is in m to rad and dq are in rad/sec
+      vc(i) = v_star[i] + K_p * (-e_t[i]) +
+              K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*dti1 + K_d*(v_ref-v_e)
+    }
+
+    std::array<double, 42> jacobian_array =
+        model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+    Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
+    //    std::cout << "-----Jacobian matrix:\n" << jacobian << std::endl;
+    //    std::cout << "-----EEposition:\n" << EEposition << std::endl;
+    std::vector<int> ind_translational_jacobian{0, 1, 2};
+    std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
+    Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
+
+    pseudoInverse(J_translation, J_translation_pinv);
+
     dq_command_PID = J_translation_pinv * vc;
   } else if (start_up == false) {
-    if (k_PID % (1000 / freq) == 0) {
+    if (k_PID % (1000 / freq_PID) == 0) {
+      Eigen::MatrixXd J_translation_pinv;
+      e_t[0] = (-r_star(0) + EEposition(0));
+      e_t[1] = (-r_star(1) + EEposition(1));
+      e_t[2] = (-r_star(2) + EEposition(2));
+      Eigen::Vector<double, 3> vc;
+      for (int i = 0; i < 3; ++i) {
+        // ATTENTION to dimenstion
+        I_e[i] += -e_t[i] / freq_PID;  // in [m/s] because jacobian is in m to rad and dq are in rad/sec
+        vc(i) = v_star[i] + K_p * (-e_t[i]) +
+                K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)/ freq_PID + K_d*(v_ref-v_e)
+      }
+      std::array<double, 42> jacobian_array =
+          model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+      Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
+      //    std::cout << "-----Jacobian matrix:\n" << jacobian << std::endl;
+      //    std::cout << "-----EEposition:\n" << EEposition << std::endl;
+      std::vector<int> ind_translational_jacobian{0, 1, 2};
+      std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
+      Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
+      pseudoInverse(J_translation, J_translation_pinv);
+
       pinocchio::Data data_pino(model_pino_biased);
       const auto& frame = model_pino_biased.frames[26];
       // Compute Jacobian for the frame
@@ -766,37 +784,38 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       pseudoInverse(J_translation_biased, J_translation_pinv);
 
       dq_command_PID = J_translation_pinv * vc;
+
+      if (false) {
+        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+          for (size_t i = 0; i < 42; ++i) {
+            PRIMITIVE_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
+          }
+          PRIMITIVE_publisher_.unlockAndPublish();
+        }
+        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+          for (size_t i = 0; i < 6; ++i) {
+            for (size_t j = 0; i < 7; ++j) {
+              PRIMITIVE_publisher_.msg_.jacobian[i] = jacobian(i, j);
+            }
+          }
+          PRIMITIVE_publisher_.unlockAndPublish();
+        }
+        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+          for (size_t i = 0; i < 3; ++i) {
+            for (size_t j = 0; j < 7; ++j) {
+              PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
+              PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] = J_translation_pinv(i, j);
+            }
+          }
+          PRIMITIVE_publisher_.unlockAndPublish();
+        }
+      }
     }
     k_PID += 1;
   }
 
   //  TODO should k_startup_speed_profile be updated here or end of call?
   k_startup_speed_profile += 1;  // k_startup_speed_profile for the start_up phase speed profile
-  if (false) {
-    if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-      for (size_t i = 0; i < 42; ++i) {
-        PRIMITIVE_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
-      }
-      PRIMITIVE_publisher_.unlockAndPublish();
-    }
-    if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-      for (size_t i = 0; i < 6; ++i) {
-        for (size_t j = 0; i < 7; ++j) {
-          PRIMITIVE_publisher_.msg_.jacobian[i] = jacobian(i, j);
-        }
-      }
-      PRIMITIVE_publisher_.unlockAndPublish();
-    }
-    if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-      for (size_t i = 0; i < 3; ++i) {
-        for (size_t j = 0; j < 7; ++j) {
-          PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
-          PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] = J_translation_pinv(i, j);
-        }
-      }
-      PRIMITIVE_publisher_.unlockAndPublish();
-    }
-  }
 
   if (start_up == true) {
     e_EE_target[0] = (r_star_tf_start_up(0) - EEposition(0));
@@ -899,7 +918,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
     PRIMITIVEVelocityController::stopRequest(ros::Time::now());
   } else {
-    if (k_SAC % (1000 / freq) == 0 and start_up == false) {
+    if (k_SAC % (1000 / freq_SAC) == 0 and start_up == false) {
       // Directly access obs data pointer to modify values without reallocation
       double* obs_data = obs.data_ptr<double>();
       obs_data[0] = e_t.at(0);
@@ -1013,8 +1032,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    }
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
-      //      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
-      dq_command(i) = dq_command_PID(i);
+      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
+      //      dq_command(i) = dq_command_PID(i);
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         if (true) {
@@ -1036,14 +1055,6 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       }
       //              send control command
       velocity_joint_handles_[i].setCommand(dq_command(i));
-    }
-  }
-  if (false) {
-    if (k % 1000 == 0) {
-      cout << "+++++++++++++++++k=" << k << "\n";
-      cout << "J_translation=" << J_translation << "\n";
-      std::cout << "q=" << q << " \n";
-      std::cout << "EEposition=" << EEposition << " \n";
     }
   }
   k += 1;

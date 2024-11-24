@@ -181,6 +181,12 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   bool received_measurement_EE = false;
   double K_mismatch = 0.2;
 
+  // [Hz] this is for SAC and PI controller commands
+  int freq_PID = 10;
+  int freq_SAC = 10;
+  // [Hz] this is for KF+target stars at startup +PI controller feedback inputs
+  int freq_fast = 1000;
+
   pinocchio::Model model_pino_biased;
 
 
