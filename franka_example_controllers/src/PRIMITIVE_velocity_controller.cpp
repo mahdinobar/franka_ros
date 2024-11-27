@@ -540,10 +540,10 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.dq.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> tau_J(robot_state.tau_J.data());
-
-  //  comment when you use observer
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
-  Eigen::Vector3d EEposition(transform.translation());
+
+  //  //  comment when you use observer
+  //  Eigen::Vector3d EEposition(transform.translation());
 
   std::array<double, 42> jacobian_array =
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
@@ -797,16 +797,16 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           }
           PRIMITIVE_publisher_.unlockAndPublish();
         }
-//        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-//          for (size_t i = 0; i < 3; ++i) {
-//            for (size_t j = 0; j < 7; ++j) {
-//              PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
-//              PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] =
-//                  J_translation_pinv_biased(i, j);
-//            }
-//          }
-//          PRIMITIVE_publisher_.unlockAndPublish();
-//        }
+        //        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+        //          for (size_t i = 0; i < 3; ++i) {
+        //            for (size_t j = 0; j < 7; ++j) {
+        //              PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
+        //              PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] =
+        //                  J_translation_pinv_biased(i, j);
+        //            }
+        //          }
+        //          PRIMITIVE_publisher_.unlockAndPublish();
+        //        }
       }
     }
     k_PID += 1;
