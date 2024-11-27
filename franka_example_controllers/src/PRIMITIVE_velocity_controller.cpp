@@ -552,21 +552,21 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
   Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
 
-  //  uncomment for observer 1 of true EE position based on sparse camera measurements
-  EEposition_kinematics = transform.translation();
+//  //  uncomment for observer 1 of true EE position based on sparse camera measurements
+//  EEposition_kinematics = transform.translation();
+//  if (received_measurement_EE == true and dt_EE > 0) {
+//    e_mismatch_1 = e_mismatch_1 + K_mismatch_1 * (p_hat_EE_w - EEposition);
+//    received_measurement_EE = false;
+//  }
+//  EEposition = EEposition_kinematics + e_mismatch_1;
+
+  //  uncomment for observer 2 of true EE position based on sparse camera measurements
+  delta_EEposition_kinematics = J_translation * dq * dt_fast;
   if (received_measurement_EE == true and dt_EE > 0) {
-    e_mismatch_1 = e_mismatch_1 + K_mismatch_1 * (p_hat_EE_w - EEposition);
+    e_mismatch_2 = e_mismatch_2 + K_mismatch_2 * (p_hat_EE_w - EEposition);
     received_measurement_EE = false;
   }
-  EEposition = EEposition_kinematics + e_mismatch_1;
-
-  //  //  uncomment for observer 2 of true EE position based on sparse camera measurements
-  //  delta_EEposition_kinematics = J_translation * dq * dt_fast;
-  //  if (received_measurement_EE == true and dt_EE > 0) {
-  //    e_mismatch_2 = e_mismatch_2 + K_mismatch_2 * (p_hat_EE_w - EEposition);
-  //    received_measurement_EE = false;
-  //  }
-  //  EEposition = EEposition + e_mismatch_2 + delta_EEposition_kinematics;
+  EEposition = EEposition + e_mismatch_2 + delta_EEposition_kinematics;
 
   if (start_up == true) {
     //     TODO smooth start_up speed profile
