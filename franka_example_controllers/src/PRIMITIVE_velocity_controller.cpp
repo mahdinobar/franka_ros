@@ -552,19 +552,25 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
   Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
 
-//  //  uncomment for observer 1 of true EE position based on sparse camera measurements
-//  EEposition_kinematics = transform.translation();
-//  if (received_measurement_EE == true and dt_EE > 0) {
-//    e_mismatch_1 = e_mismatch_1 + K_mismatch_1 * (p_hat_EE_w - EEposition);
-//    received_measurement_EE = false;
-//  }
-//  EEposition = EEposition_kinematics + e_mismatch_1;
+  //  //  uncomment for observer 1 of true EE position based on sparse camera measurements
+  //  EEposition_kinematics = transform.translation();
+  //  if (received_measurement_EE == true and dt_EE > 0) {
+  //    e_mismatch_1 = e_mismatch_1 + K_mismatch_1 * (p_hat_EE_w - EEposition);
+  //    received_measurement_EE = false;
+  //  }
+  //  EEposition = EEposition_kinematics + e_mismatch_1;
 
   //  uncomment for observer 2 of true EE position based on sparse camera measurements
   delta_EEposition_kinematics = J_translation * dq * dt_fast;
+  if (k == 0) {
+    EEposition_kinematics = transform.translation();
+    EEposition = EEposition_kinematics;
+  }
   if (received_measurement_EE == true and dt_EE > 0) {
-    e_mismatch_2 = e_mismatch_2 + K_mismatch_2 * (p_hat_EE_w - EEposition);
+    e_mismatch_2 = K_mismatch_2 * (p_hat_EE_w - EEposition);
     received_measurement_EE = false;
+  } else {
+    e_mismatch_2 = {0, 0, 0};
   }
   EEposition = EEposition + e_mismatch_2 + delta_EEposition_kinematics;
 
@@ -1071,8 +1077,10 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       if (i < 3) {
         PRIMITIVE_publisher_.msg_.r_star[i] = r_star(i);
         PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
+        //        PRIMITIVE_publisher_.msg_.EEposition_ob2_test[i] = EEposition_ob2_test(i);
+        PRIMITIVE_publisher_.msg_.delta_EEposition_kinematics[i] = delta_EEposition_kinematics(i);
         PRIMITIVE_publisher_.msg_.e_mismatch_1[i] = e_mismatch_1(i);
-        PRIMITIVE_publisher_.msg_.e_mismatch_1[i] = e_mismatch_2(i);
+        PRIMITIVE_publisher_.msg_.e_mismatch_2[i] = e_mismatch_2(i);
       }
     }
     PRIMITIVE_publisher_.unlockAndPublish();

@@ -4,6 +4,8 @@ float64[3] e_mismatch_1
 float64[3] e_mismatch_2
 float64[3] v_star
 float64[3] EEposition
+float64[3] EEposition_ob2_test
+float64[3] delta_EEposition_kinematics
 float64[42] jacobian
 float64[21] J_translation
 float64[21] J_translation_pinv
