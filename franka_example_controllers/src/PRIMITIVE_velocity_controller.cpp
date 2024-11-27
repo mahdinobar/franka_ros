@@ -233,11 +233,11 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   // Create data required by the algorithms
   pinocchio::Data data(model);
 
-  //  uncomment for two kinematics based experiments
-  const std::string urdf_filename_biased = std::string(
-      "/home/mahdi/catkin_ws/src/franka_ros/franka_description/robots/panda/"
-      "panda_corrected_Nosc_biased_1.urdf");
-  pinocchio::urdf::buildModel(urdf_filename_biased, model_pino_biased);
+  //  //  uncomment for two kinematics based experiments
+  //  const std::string urdf_filename_biased = std::string(
+  //      "/home/mahdi/catkin_ws/src/franka_ros/franka_description/robots/panda/"
+  //      "panda_corrected_Nosc_biased_1.urdf");
+  //  pinocchio::urdf::buildModel(urdf_filename_biased, model_pino_biased);
 
   // Sample a random configuration
   //  Eigen::VectorXd qtest = randomConfiguration(model);
@@ -540,8 +540,11 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.dq.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> tau_J(robot_state.tau_J.data());
+
+  //  comment when you use observer
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
   Eigen::Vector3d EEposition(transform.translation());
+
   std::array<double, 42> jacobian_array =
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
   Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
@@ -549,13 +552,13 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
   Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
 
-  //  //  uncomment for observer 1 of true EE position based on sparse camera measurements
-  //  EEposition_kinematics = transform.translation();
-  //  if (received_measurement_EE == true and dt_EE > 0) {
-  //    e_mismatch_1 = e_mismatch_1 + K_mismatch_1 * (p_hat_EE_w - EEposition);
-  //    received_measurement_EE = false;
-  //  }
-  //  EEposition = EEposition_kinematics + e_mismatch_1;
+  //  uncomment for observer 1 of true EE position based on sparse camera measurements
+  EEposition_kinematics = transform.translation();
+  if (received_measurement_EE == true and dt_EE > 0) {
+    e_mismatch_1 = e_mismatch_1 + K_mismatch_1 * (p_hat_EE_w - EEposition);
+    received_measurement_EE = false;
+  }
+  EEposition = EEposition_kinematics + e_mismatch_1;
 
   //  //  uncomment for observer 2 of true EE position based on sparse camera measurements
   //  delta_EEposition_kinematics = J_translation * dq * dt_fast;
@@ -756,26 +759,28 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
                 K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)/ freq_PID + K_d*(v_ref-v_e)
       }
 
-      ////      comment when two kinematics based experiments
-      //      pseudoInverse(J_translation, J_translation_pinv);
-      //      dq_command_PID = J_translation_pinv * vc;
+      //      comment when two kinematics based experiments
+      Eigen::MatrixXd J_translation_pinv;
+      pseudoInverse(J_translation, J_translation_pinv);
+      dq_command_PID = J_translation_pinv * vc;
 
-      //  uncomment for two kinematics based experiments
-      Eigen::MatrixXd J_translation_pinv_biased;
-      pinocchio::Data data_pino(model_pino_biased);
-      const auto& frame = model_pino_biased.frames[26];
-      // Compute Jacobian for the frame
-      Eigen::MatrixXd jacobian_tmp(6, model_pino_biased.nv);
-      Eigen::Matrix<double, 9, 1> q_extended;
-      // Copy the original 7 elements
-      q_extended.head<7>() = q;
-      // Add two zero rows at the end
-      q_extended.tail<2>().setZero();
-      pinocchio::computeFrameJacobian(model_pino_biased, data_pino, q_extended, 26,
-                                      pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED, jacobian_tmp);
-      Eigen::MatrixXd J_translation_biased = jacobian_tmp.block(0, 0, 3, 7);
-      pseudoInverse(J_translation_biased, J_translation_pinv_biased);
-      dq_command_PID = J_translation_pinv_biased * vc;
+      //      //  uncomment for two kinematics based experiments
+      //      Eigen::MatrixXd J_translation_pinv_biased;
+      //      pinocchio::Data data_pino(model_pino_biased);
+      //      const auto& frame = model_pino_biased.frames[26];
+      //      // Compute Jacobian for the frame
+      //      Eigen::MatrixXd jacobian_tmp(6, model_pino_biased.nv);
+      //      Eigen::Matrix<double, 9, 1> q_extended;
+      //      // Copy the original 7 elements
+      //      q_extended.head<7>() = q;
+      //      // Add two zero rows at the end
+      //      q_extended.tail<2>().setZero();
+      //      pinocchio::computeFrameJacobian(model_pino_biased, data_pino, q_extended, 26,
+      //                                      pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED,
+      //                                      jacobian_tmp);
+      //      Eigen::MatrixXd J_translation_biased = jacobian_tmp.block(0, 0, 3, 7);
+      //      pseudoInverse(J_translation_biased, J_translation_pinv_biased);
+      //      dq_command_PID = J_translation_pinv_biased * vc;
 
       if (false) {
         if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
@@ -792,16 +797,16 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           }
           PRIMITIVE_publisher_.unlockAndPublish();
         }
-        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-          for (size_t i = 0; i < 3; ++i) {
-            for (size_t j = 0; j < 7; ++j) {
-              PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
-              PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] =
-                  J_translation_pinv_biased(i, j);
-            }
-          }
-          PRIMITIVE_publisher_.unlockAndPublish();
-        }
+//        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+//          for (size_t i = 0; i < 3; ++i) {
+//            for (size_t j = 0; j < 7; ++j) {
+//              PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
+//              PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] =
+//                  J_translation_pinv_biased(i, j);
+//            }
+//          }
+//          PRIMITIVE_publisher_.unlockAndPublish();
+//        }
       }
     }
     k_PID += 1;
@@ -1025,8 +1030,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    }
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
-      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
-      //      dq_command(i) = dq_command_PID(i);
+      //      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
+      dq_command(i) = dq_command_PID(i);
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         if (true) {
