@@ -113,7 +113,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   //  0.15352824044213864}; Eigen::Matrix<double, 3, 1> r_star_tf = {0.5341719324165605,
   //  0.229155481, 0.14369105360211876}; Eigen::Matrix<double, 3, 1> r_star_tf = {0.5345, -0.2465,
   //  0.1442};
-  Eigen::Matrix<double, 3, 1> r_star_tf = {0.5345, 0.2285, 0.1442};  // 475 mm forwarded
+  Eigen::Matrix<double, 3, 1> r_star_tf = {0.5345, 0.2285, 0.1392};  // 475 mm forwarded
   double v_star_dir[3];
   double v_star[3];
   std::array<double, 3> e_t = {0, 0, 0};
@@ -174,12 +174,14 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   torch::Tensor obs = torch::empty({1, 27}, torch::kDouble);  // Pre-allocate with correct shape
   std::vector<torch::jit::IValue> observations = {obs};       // Pre-allocate and wrap the tensor
 
-  Eigen::Vector3d e_mismatch{0, 0, 0};
-  //  Eigen::Vector3d e_mismatch{-0.003111932, 0.014457519, -0.006061054};
+
   Eigen::Vector3d EEposition_kinematics{0, 0, 0};
   Eigen::Vector3d EEposition{0, 0, 0};
   bool received_measurement_EE = false;
-  double K_mismatch = 0.2;
+  Eigen::Vector3d e_mismatch_1{0, 0, 0};
+  Eigen::Vector3d e_mismatch_2{0, 0, 0};
+  double K_mismatch_1 = 0.2;
+  double K_mismatch_2 = 0.2;
 
   // [Hz] this is for SAC and PI controller commands
   int freq_PID = 10;
@@ -188,6 +190,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   int freq_fast = 1000;
 
   pinocchio::Model model_pino_biased;
+  Eigen::Vector3d delta_EEposition_kinematics;
+
 
 
 

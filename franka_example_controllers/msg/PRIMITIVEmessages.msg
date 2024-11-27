@@ -1,6 +1,7 @@
 std_msgs/Header header
 float64[3] r_star
-float64[3] e_mismatch
+float64[3] e_mismatch_1
+float64[3] e_mismatch_2
 float64[3] v_star
 float64[3] EEposition
 float64[42] jacobian

@@ -233,10 +233,11 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   // Create data required by the algorithms
   pinocchio::Data data(model);
 
-  const std::string urdf_filename_biased = std::string(
-      "/home/mahdi/catkin_ws/src/franka_ros/franka_description/robots/panda/"
-      "panda_corrected_Nosc_biased_1.urdf");
-  pinocchio::urdf::buildModel(urdf_filename_biased, model_pino_biased);
+  //  uncomment for two kinematics based experiments
+    const std::string urdf_filename_biased = std::string(
+        "/home/mahdi/catkin_ws/src/franka_ros/franka_description/robots/panda/"
+        "panda_corrected_Nosc_biased_1.urdf");
+    pinocchio::urdf::buildModel(urdf_filename_biased, model_pino_biased);
 
   // Sample a random configuration
   //  Eigen::VectorXd qtest = randomConfiguration(model);
@@ -530,32 +531,40 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     std::cout << "ERROR: CANNOT hear p_hat_EE_w!" << "\n";
   }
 
-  double dti1 = 0.001 * (1000 / freq_fast);
+  double dt_fast = 0.001 * (1000 / freq_fast);  // [s]
   //  //    TODO check joints_pose_ updates and i.c. is correct
   //  for (size_t i = 0; i < 7; ++i) {
   //    joints_pose_[i] = velocity_joint_handles_[i].getPosition();
   //  }
   franka::RobotState robot_state = state_handle_->getRobotState();
-  Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
-  //  Eigen::Vector3d EEposition(transform.translation());
-  EEposition_kinematics = transform.translation();
-  //  Observer of true EE position based on sparse camera measurements
-  //  if (start_up == false) {
-  if (received_measurement_EE == true and dt_EE > 0) {
-    //    cout << "before e_mismatch=" << e_mismatch << "\n";
-    e_mismatch = e_mismatch + K_mismatch * (p_hat_EE_w - EEposition);
-    //    cout << "p_hat_EE_w=" << p_hat_EE_w << "\n";
-    //    cout << "EEposition=" << EEposition << "\n";
-    //    cout << "after e_mismatch=" << e_mismatch << "\n";
-    received_measurement_EE = false;
-  }
-  //  }
-  //  EEposition = EEposition_kinematics + e_mismatch;
-  EEposition = EEposition_kinematics;
-
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> q(robot_state.q.data());
-  Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.q.data());
+  Eigen::Map<const Eigen::Matrix<double, 7, 1>> dq(robot_state.dq.data());
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> tau_J(robot_state.tau_J.data());
+  Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
+  Eigen::Vector3d EEposition(transform.translation());
+  std::array<double, 42> jacobian_array =
+      model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
+  Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
+  std::vector<int> ind_translational_jacobian{0, 1, 2};
+  std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
+  Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
+
+  //  //  uncomment for observer 1 of true EE position based on sparse camera measurements
+  //  EEposition_kinematics = transform.translation();
+  //  if (received_measurement_EE == true and dt_EE > 0) {
+  //    e_mismatch_1 = e_mismatch_1 + K_mismatch_1 * (p_hat_EE_w - EEposition);
+  //    received_measurement_EE = false;
+  //  }
+  //  EEposition = EEposition_kinematics + e_mismatch_1;
+
+  //  //  uncomment for observer 2 of true EE position based on sparse camera measurements
+  //  delta_EEposition_kinematics = J_translation * dq * dt_fast;
+  //  if (received_measurement_EE == true and dt_EE > 0) {
+  //    e_mismatch_2 = e_mismatch_2 + K_mismatch_2 * (p_hat_EE_w - EEposition);
+  //    received_measurement_EE = false;
+  //  }
+  //  EEposition = EEposition + e_mismatch_2 + delta_EEposition_kinematics;
+
   if (start_up == true) {
     //     TODO smooth start_up speed profile
     double v_star_dir_length =
@@ -563,7 +572,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
         34.9028 / (1 + std::exp(-0.04 * (0 - 250))) / 1000;
     for (int i = 0; i < 3; ++i) {
       v_star[i] = v_star_dir[i] / norm_v_star_dir * v_star_dir_length;
-      r_star(i) = dti1 * v_star[i] + r_star(i);
+      r_star(i) = dt_fast * v_star[i] + r_star(i);
     }
   } else if (start_up == false) {
     //  TODO how can you make KF conditions especially initially more efficient?
@@ -718,33 +727,23 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   }
 
   if (start_up == true) {
-    Eigen::MatrixXd J_translation_pinv;
     e_t[0] = (-r_star(0) + EEposition(0));
     e_t[1] = (-r_star(1) + EEposition(1));
     e_t[2] = (-r_star(2) + EEposition(2));
     Eigen::Vector<double, 3> vc;
     for (int i = 0; i < 3; ++i) {
       // ATTENTION to dimenstion
-      I_e[i] += -e_t[i] * dti1;  // in [m/s] because jacobian is in m to rad and dq are in rad/sec
+      I_e[i] +=
+          -e_t[i] * dt_fast;  // in [m/s] because jacobian is in m to rad and dq are in rad/sec
       vc(i) = v_star[i] + K_p * (-e_t[i]) +
-              K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*dti1 + K_d*(v_ref-v_e)
+              K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*dt_fast + K_d*(v_ref-v_e)
     }
-
-    std::array<double, 42> jacobian_array =
-        model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-    Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
-    //    std::cout << "-----Jacobian matrix:\n" << jacobian << std::endl;
-    //    std::cout << "-----EEposition:\n" << EEposition << std::endl;
-    std::vector<int> ind_translational_jacobian{0, 1, 2};
-    std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
-    Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
-
+    Eigen::MatrixXd J_translation_pinv;
     pseudoInverse(J_translation, J_translation_pinv);
 
     dq_command_PID = J_translation_pinv * vc;
   } else if (start_up == false) {
     if (k_PID % (1000 / freq_PID) == 0) {
-      Eigen::MatrixXd J_translation_pinv;
       e_t[0] = (-r_star(0) + EEposition(0));
       e_t[1] = (-r_star(1) + EEposition(1));
       e_t[2] = (-r_star(2) + EEposition(2));
@@ -756,16 +755,13 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
         vc(i) = v_star[i] + K_p * (-e_t[i]) +
                 K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)/ freq_PID + K_d*(v_ref-v_e)
       }
-      std::array<double, 42> jacobian_array =
-          model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
-      Eigen::Map<Eigen::Matrix<double, 6, 7>> jacobian(jacobian_array.data());
-      //    std::cout << "-----Jacobian matrix:\n" << jacobian << std::endl;
-      //    std::cout << "-----EEposition:\n" << EEposition << std::endl;
-      std::vector<int> ind_translational_jacobian{0, 1, 2};
-      std::vector<int> ind_dof{0, 1, 2, 3, 4, 5, 6};
-      Eigen::Matrix<double, 3, 7> J_translation = jacobian(ind_translational_jacobian, ind_dof);
-      pseudoInverse(J_translation, J_translation_pinv);
 
+      ////      comment when two kinematics based experiments
+      //      pseudoInverse(J_translation, J_translation_pinv);
+      //      dq_command_PID = J_translation_pinv * vc;
+
+      //  uncomment for two kinematics based experiments
+      Eigen::MatrixXd J_translation_pinv_biased;
       pinocchio::Data data_pino(model_pino_biased);
       const auto& frame = model_pino_biased.frames[26];
       // Compute Jacobian for the frame
@@ -777,12 +773,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       q_extended.tail<2>().setZero();
       pinocchio::computeFrameJacobian(model_pino_biased, data_pino, q_extended, 26,
                                       pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED, jacobian_tmp);
-      //  Eigen::MatrixXd J_translation_biased = jacobian.topRows(3);
       Eigen::MatrixXd J_translation_biased = jacobian_tmp.block(0, 0, 3, 7);
-
-      pseudoInverse(J_translation_biased, J_translation_pinv);
-
-      dq_command_PID = J_translation_pinv * vc;
+      pseudoInverse(J_translation_biased, J_translation_pinv_biased);
+      dq_command_PID = J_translation_pinv_biased * vc;
 
       if (false) {
         if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
@@ -803,7 +796,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           for (size_t i = 0; i < 3; ++i) {
             for (size_t j = 0; j < 7; ++j) {
               PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
-              PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] = J_translation_pinv(i, j);
+              PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] = J_translation_pinv_biased(i, j);
             }
           }
           PRIMITIVE_publisher_.unlockAndPublish();
@@ -1072,7 +1065,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       if (i < 3) {
         PRIMITIVE_publisher_.msg_.r_star[i] = r_star(i);
         PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
-        PRIMITIVE_publisher_.msg_.e_mismatch[i] = e_mismatch(i);
+        PRIMITIVE_publisher_.msg_.e_mismatch_1[i] = e_mismatch_1(i);
+        PRIMITIVE_publisher_.msg_.e_mismatch_1[i] = e_mismatch_2(i);
       }
     }
     PRIMITIVE_publisher_.unlockAndPublish();
