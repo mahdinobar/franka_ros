@@ -234,10 +234,10 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   pinocchio::Data data(model);
 
   //  uncomment for two kinematics based experiments
-    const std::string urdf_filename_biased = std::string(
-        "/home/mahdi/catkin_ws/src/franka_ros/franka_description/robots/panda/"
-        "panda_corrected_Nosc_biased_1.urdf");
-    pinocchio::urdf::buildModel(urdf_filename_biased, model_pino_biased);
+  const std::string urdf_filename_biased = std::string(
+      "/home/mahdi/catkin_ws/src/franka_ros/franka_description/robots/panda/"
+      "panda_corrected_Nosc_biased_1.urdf");
+  pinocchio::urdf::buildModel(urdf_filename_biased, model_pino_biased);
 
   // Sample a random configuration
   //  Eigen::VectorXd qtest = randomConfiguration(model);
@@ -796,7 +796,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           for (size_t i = 0; i < 3; ++i) {
             for (size_t j = 0; j < 7; ++j) {
               PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
-              PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] = J_translation_pinv_biased(i, j);
+              PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] =
+                  J_translation_pinv_biased(i, j);
             }
           }
           PRIMITIVE_publisher_.unlockAndPublish();
@@ -1024,8 +1025,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    }
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
-      //      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
-      dq_command(i) = dq_command_PID(i);
+      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
+      //      dq_command(i) = dq_command_PID(i);
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         if (true) {
