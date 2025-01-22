@@ -198,7 +198,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   // Load your serialized model --- SAC Actor Neural Network
   actor = torch::jit::load(
       "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/config/"
-      "traced_model_Cpp_Fep_HW_204_double.pt");
+      "traced_model_Cpp_Fep_HW_262_double.pt");
   std::cout << "+++++Actor model loaded successfully.+++++" << std::endl;
   //  torch::Tensor input_tensor = torch::ones({1, 27});  // Example random tensor
   //  // Wrap inputs in a vector of torch::jit::IValue
@@ -233,11 +233,11 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   // Create data required by the algorithms
   pinocchio::Data data(model);
 
-  //  //  uncomment for two kinematics based experiments
-  //  const std::string urdf_filename_biased = std::string(
-  //      "/home/mahdi/catkin_ws/src/franka_ros/franka_description/robots/panda/"
-  //      "panda_corrected_Nosc_biased_1.urdf");
-  //  pinocchio::urdf::buildModel(urdf_filename_biased, model_pino_biased);
+  //  uncomment for two kinematics based experiments
+  const std::string urdf_filename_biased = std::string(
+      "/home/mahdi/catkin_ws/src/franka_ros/franka_description/robots/panda/"
+      "panda_corrected_Nosc_biased_1.urdf");
+  pinocchio::urdf::buildModel(urdf_filename_biased, model_pino_biased);
 
   // Sample a random configuration
   //  Eigen::VectorXd qtest = randomConfiguration(model);
@@ -542,8 +542,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   Eigen::Map<const Eigen::Matrix<double, 7, 1>> tau_J(robot_state.tau_J.data());
   Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
 
-  //  //  comment when you use observer
-  //  Eigen::Vector3d EEposition(transform.translation());
+  //  comment when you use observer
+  Eigen::Vector3d EEposition(transform.translation());
 
   std::array<double, 42> jacobian_array =
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
@@ -560,19 +560,19 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //  }
   //  EEposition = EEposition_kinematics + e_mismatch_1;
 
-  //  uncomment for observer 2 of true EE position based on sparse camera measurements
-  delta_EEposition_kinematics = J_translation * dq * dt_fast;
-  if (k == 0) {
-    EEposition_kinematics = transform.translation();
-    EEposition = EEposition_kinematics;
-  }
-  if (received_measurement_EE == true and dt_EE > 0) {
-    e_mismatch_2 = K_mismatch_2 * (p_hat_EE_w - EEposition);
-    received_measurement_EE = false;
-  } else {
-    e_mismatch_2 = {0, 0, 0};
-  }
-  EEposition = EEposition + e_mismatch_2 + delta_EEposition_kinematics;
+  //  //  uncomment for observer 2 of true EE position based on sparse camera measurements
+  //  delta_EEposition_kinematics = J_translation * dq * dt_fast;
+  //  if (k == 0) {
+  //    EEposition_kinematics = transform.translation();
+  //    EEposition = EEposition_kinematics;
+  //  }
+  //  if (received_measurement_EE == true and dt_EE > 0) {
+  //    e_mismatch_2 = K_mismatch_2 * (p_hat_EE_w - EEposition);
+  //    received_measurement_EE = false;
+  //  } else {
+  //    e_mismatch_2 = {0, 0, 0};
+  //  }
+  //  EEposition = EEposition + e_mismatch_2 + delta_EEposition_kinematics;
 
   if (start_up == true) {
     //     TODO smooth start_up speed profile
@@ -765,28 +765,27 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
                 K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)/ freq_PID + K_d*(v_ref-v_e)
       }
 
-      //      comment when two kinematics based experiments
-      Eigen::MatrixXd J_translation_pinv;
-      pseudoInverse(J_translation, J_translation_pinv);
-      dq_command_PID = J_translation_pinv * vc;
+      //      //      comment when two kinematics based experiments
+      //      Eigen::MatrixXd J_translation_pinv;
+      //      pseudoInverse(J_translation, J_translation_pinv);
+      //      dq_command_PID = J_translation_pinv * vc;
 
-      //      //  uncomment for two kinematics based experiments
-      //      Eigen::MatrixXd J_translation_pinv_biased;
-      //      pinocchio::Data data_pino(model_pino_biased);
-      //      const auto& frame = model_pino_biased.frames[26];
-      //      // Compute Jacobian for the frame
-      //      Eigen::MatrixXd jacobian_tmp(6, model_pino_biased.nv);
-      //      Eigen::Matrix<double, 9, 1> q_extended;
-      //      // Copy the original 7 elements
-      //      q_extended.head<7>() = q;
-      //      // Add two zero rows at the end
-      //      q_extended.tail<2>().setZero();
-      //      pinocchio::computeFrameJacobian(model_pino_biased, data_pino, q_extended, 26,
-      //                                      pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED,
-      //                                      jacobian_tmp);
-      //      Eigen::MatrixXd J_translation_biased = jacobian_tmp.block(0, 0, 3, 7);
-      //      pseudoInverse(J_translation_biased, J_translation_pinv_biased);
-      //      dq_command_PID = J_translation_pinv_biased * vc;
+      //  uncomment for fematics based experiments and when not use observer
+      Eigen::MatrixXd J_translation_pinv_biased;
+      pinocchio::Data data_pino(model_pino_biased);
+      const auto& frame = model_pino_biased.frames[26];
+      // Compute Jacobian for the frame
+      Eigen::MatrixXd jacobian_tmp(6, model_pino_biased.nv);
+      Eigen::Matrix<double, 9, 1> q_extended;
+      // Copy the original 7 elements
+      q_extended.head<7>() = q;
+      // Add two zero rows at the end
+      q_extended.tail<2>().setZero();
+      pinocchio::computeFrameJacobian(model_pino_biased, data_pino, q_extended, 26,
+                                      pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED, jacobian_tmp);
+      Eigen::MatrixXd J_translation_biased = jacobian_tmp.block(0, 0, 3, 7);
+      pseudoInverse(J_translation_biased, J_translation_pinv_biased);
+      dq_command_PID = J_translation_pinv_biased * vc;
 
       if (false) {
         if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
@@ -1036,8 +1035,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    }
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
-      //      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
-      dq_command(i) = dq_command_PID(i);
+      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
+      //      dq_command(i) = dq_command_PID(i);
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         if (true) {

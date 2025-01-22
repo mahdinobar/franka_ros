@@ -197,8 +197,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
 
 
 
-  double K_p = 5;
-  double K_i = 0.5;
+  double K_p = 1;
+  double K_i = 0.1;
 };
 
 }  // namespace franka_example_controllers
