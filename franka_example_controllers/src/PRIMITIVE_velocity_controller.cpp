@@ -198,7 +198,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   // Load your serialized model --- SAC Actor Neural Network
   actor = torch::jit::load(
       "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/config/"
-      "traced_model_Cpp_Fep_HW_262_double.pt");
+      "traced_model_Cpp_Fep_HW_272_double.pt");
   std::cout << "+++++Actor model loaded successfully.+++++" << std::endl;
   //  torch::Tensor input_tensor = torch::ones({1, 27});  // Example random tensor
   //  // Wrap inputs in a vector of torch::jit::IValue
@@ -840,7 +840,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //    if (std::abs(e_EE_target[1]) < 0.020801 and start_up == true) {
   //  TODO improve temporary solution: due to delay manually approximated corrosponding startup
   //  phase, trigger motor after k~730[ms]
-  if (k > 720 and start_up == true) {
+  if (k > 600 and start_up == true) {
     //    TODO this is not necessarily is going to lock
     //    publish message to switch on the conveyor belt
     if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
@@ -848,7 +848,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
       STEPPERMOTOR_publisher_.unlockAndPublish();
     }
-    if (k = 720) {
+    if (k = 600) {
       std::cout << "Triggered stepper motor sooner!" << endl;
     }
   }
@@ -939,18 +939,24 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       obs_data[12] = dq(3);
       obs_data[13] = dq(4);
       obs_data[14] = dq(5);
-      obs_data[15] = tau_J(0);
-      obs_data[16] = tau_J(1);
-      obs_data[17] = tau_J(2);
-      obs_data[18] = tau_J(3);
-      obs_data[19] = tau_J(4);
-      obs_data[20] = tau_J(5);
-      obs_data[21] = dq_command_PID(0);
-      obs_data[22] = dq_command_PID(1);
-      obs_data[23] = dq_command_PID(2);
-      obs_data[24] = dq_command_PID(3);
-      obs_data[25] = dq_command_PID(4);
-      obs_data[26] = dq_command_PID(5);
+      obs_data[15] = dq_command_PID(0);
+      obs_data[16] = dq_command_PID(1);
+      obs_data[17] = dq_command_PID(2);
+      obs_data[18] = dq_command_PID(3);
+      obs_data[19] = dq_command_PID(4);
+      obs_data[20] = dq_command_PID(5);
+      //      obs_data[15] = tau_J(0);
+      //      obs_data[16] = tau_J(1);
+      //      obs_data[17] = tau_J(2);
+      //      obs_data[18] = tau_J(3);
+      //      obs_data[19] = tau_J(4);
+      //      obs_data[20] = tau_J(5);
+      //      obs_data[21] = dq_command_PID(0);
+      //      obs_data[22] = dq_command_PID(1);
+      //      obs_data[23] = dq_command_PID(2);
+      //      obs_data[24] = dq_command_PID(3);
+      //      obs_data[25] = dq_command_PID(4);
+      //      obs_data[26] = dq_command_PID(5);
 
       // Run the model's forward pass without re-pushing to observations
       torch::jit::IValue output = actor.forward(observations);
@@ -1035,8 +1041,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    }
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
-      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
-      //      dq_command(i) = dq_command_PID(i);
+      //      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
+      dq_command(i) = dq_command_PID(i);
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         if (true) {

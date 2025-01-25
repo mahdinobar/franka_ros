@@ -171,7 +171,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   torch::jit::script::Module actor;
   Eigen::Matrix<double, 1, 6> dq_SAC{0, 0, 0, 0, 0, 0};
   // Pre-allocate the tensor and vector outside the real-time loop
-  torch::Tensor obs = torch::empty({1, 27}, torch::kDouble);  // Pre-allocate with correct shape
+  torch::Tensor obs = torch::empty({1, 21}, torch::kDouble);  // ATTENTION to SAC state space dimension
   std::vector<torch::jit::IValue> observations = {obs};       // Pre-allocate and wrap the tensor
 
 
