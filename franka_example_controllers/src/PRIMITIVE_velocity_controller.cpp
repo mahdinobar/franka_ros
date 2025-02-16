@@ -933,12 +933,19 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       obs_data[6] = q(3);
       obs_data[7] = q(4);
       obs_data[8] = q(5);
-      obs_data[9] = dq(0);
-      obs_data[10] = dq(1);
-      obs_data[11] = dq(2);
-      obs_data[12] = dq(3);
-      obs_data[13] = dq(4);
-      obs_data[14] = dq(5);
+      //      obs_data[9] = dq(0);
+      //      obs_data[10] = dq(1);
+      //      obs_data[11] = dq(2);
+      //      obs_data[12] = dq(3);
+      //      obs_data[13] = dq(4);
+      //      obs_data[14] = dq(5);
+      filtered_dq = alpha_LPF * dq + (1.0 - alpha_LPF) * filtered_dq;
+      obs_data[9] = filtered_dq(0);
+      obs_data[10] = filtered_dq(1);
+      obs_data[11] = filtered_dq(2);
+      obs_data[12] = filtered_dq(3);
+      obs_data[13] = filtered_dq(4);
+      obs_data[14] = filtered_dq(5);
       obs_data[15] = dq_command_PID(0);
       obs_data[16] = dq_command_PID(1);
       obs_data[17] = dq_command_PID(2);
@@ -1041,8 +1048,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    }
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
-      //      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
-      dq_command(i) = dq_command_PID(i);
+      dq_command(i) = dq_command_PID(i) + dq_SAC(i);
+      //      dq_command(i) = dq_command_PID(i);
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
         if (true) {
@@ -1076,6 +1083,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       //      PRIMITIVE_publisher_.msg_.dq_command[i] = dq_command(i);
       //      PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
       PRIMITIVE_publisher_.msg_.dq_command_PID[i] = dq_command_PID(i);
+      PRIMITIVE_publisher_.msg_.filtered_dq[i] = filtered_dq(i);
       if (i < 6) {
         PRIMITIVE_publisher_.msg_.dq_SAC[i] = dq_SAC(i);
       }

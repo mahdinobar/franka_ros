@@ -194,7 +194,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::Vector3d delta_EEposition_kinematics;
 
 
-
+  double alpha_LPF = 0.3; // Smoothing factor of low-pass filter
+  Eigen::Matrix<double, 7, 1> filtered_dq= {0, 0, 0, 0, 0, 0, 0};
 
 
   double K_p = 1;

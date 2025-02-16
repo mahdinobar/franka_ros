@@ -13,5 +13,6 @@ float64[42] jacobian_array
 float64[7] q_c
 float64[7] dq_command
 float64[7] dq_command_PID
+float64[7] filtered_dq
 float64[6] dq_SAC
 geometry_msgs/Vector3Stamped stepper_motor_switch
