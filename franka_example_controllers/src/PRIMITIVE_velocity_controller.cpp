@@ -198,7 +198,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   // Load your serialized model --- SAC Actor Neural Network
   actor = torch::jit::load(
       "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/config/"
-      "traced_model_Cpp_Fep_HW_272_double.pt");
+      "traced_model_Cpp_Fep_HW_274_double.pt");
   std::cout << "+++++Actor model loaded successfully.+++++" << std::endl;
   //  torch::Tensor input_tensor = torch::ones({1, 27});  // Example random tensor
   //  // Wrap inputs in a vector of torch::jit::IValue
