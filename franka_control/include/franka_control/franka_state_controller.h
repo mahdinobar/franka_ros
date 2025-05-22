@@ -11,6 +11,7 @@
 #include <franka_hw/trigger_rate.h>
 #include <franka_msgs/FrankaState.h>
 #include <geometry_msgs/WrenchStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <sensor_msgs/JointState.h>
 #include <tf2_msgs/TFMessage.h>
@@ -49,6 +50,7 @@ class FrankaStateController
 
  private:
   void publishFrankaStates(const ros::Time& time);
+  void publishmyFrankaStates(const ros::Time& time);
   void publishJointStates(const ros::Time& time);
   void publishTransforms(const ros::Time& time);
   void publishExternalWrench(const ros::Time& time);
@@ -63,6 +65,7 @@ class FrankaStateController
   realtime_tools::RealtimePublisher<sensor_msgs::JointState> publisher_joint_states_;
   realtime_tools::RealtimePublisher<sensor_msgs::JointState> publisher_joint_states_desired_;
   realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped> publisher_external_wrench_;
+  realtime_tools::RealtimePublisher<geometry_msgs::PoseStamped> publisher_ee_pose_;
   franka_hw::TriggerRate trigger_publish_;
   franka::RobotState robot_state_;
   uint64_t sequence_number_ = 0;
