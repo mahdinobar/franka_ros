@@ -187,7 +187,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   // [Hz] this is for SAC and PI controller commands
   int freq_PID = 10;
   int freq_SAC = 10;
-  // [Hz] this is for KF+target stars at startup +PI controller feedback inputs
+  // [Hz] this is for KF+target stars at startup +PI controller feedback inputs at startup phase only
   int freq_fast = 1000;
 
   pinocchio::Model model_pino_biased;
