@@ -41,6 +41,7 @@
 #include "geometry_msgs/Vector3.h"
 #include "geometry_msgs/Vector3Stamped.h"
 #include "std_msgs/Float64MultiArray.h"
+#include "geometry_msgs/PoseStamped.h"
 
 #include <torch/script.h>
 #include <torch/torch.h>
@@ -90,10 +91,12 @@ void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Sta
   command_struct_.t_stamp_camera_measurement = data.header.stamp.toSec();
   command_.writeFromNonRT(command_struct_);
   received_measurement = true;
-  cout << "Camera measurement received!\n" << endl;
-  cout << "data.x=" << data.vector.x << endl;
-  cout << "data.y=" << data.vector.y << endl;
-  cout << "data.z=" << data.vector.z << endl;
+  if (false) {
+      cout << "Camera measurement received!\n" << endl;
+      cout << "data.x=" << data.vector.x << endl;
+      cout << "data.y=" << data.vector.y << endl;
+      cout << "data.z=" << data.vector.z << endl;
+    }
 }
 void PRIMITIVEVelocityController::cmdVelCallback_EE(const geometry_msgs::Vector3Stamped& data) {
   command_struct_EE_.x = data.vector.x;
@@ -171,8 +174,10 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
                      << ex.what());
     return false;
   }
-  PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1e6, false);
+  PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1);
   STEPPERMOTOR_publisher_.init(node_handle, "STEPPERMOTOR_messages", 1e6, false);
+  PRIMITIVEpublisher_ee_pose_.init(node_handle, "PRIMITIVEmyfranka_ee_pose", 1);
+  
   sub_command_ =
       node_handle.subscribe("/p_hat_w", 100, &PRIMITIVEVelocityController::cmdVelCallback, this);
   sub_command_EE_ = node_handle.subscribe("/p_hat_EE_w", 100,
@@ -1076,7 +1081,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   k += 1;
   //  TODO can this publish be moved just after command? or more efficiently publish?
   //  if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-  if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+//  if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+  if (PRIMITIVE_publisher_.trylock()) {
+    PRIMITIVE_publisher_.msg_.header.stamp = rosTime; //ros::Time::now();
     //    dq_command_float = dq_command.cast<float>();
     for (size_t i = 0; i < 7; ++i) {
       // inner loop 1: k=1ms (1000 Hz)
@@ -1097,6 +1104,15 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       }
     }
     PRIMITIVE_publisher_.unlockAndPublish();
+  }
+  if (PRIMITIVEpublisher_ee_pose_.trylock()) {
+    PRIMITIVEpublisher_ee_pose_.msg_.pose.position.x = EEposition(0);
+    PRIMITIVEpublisher_ee_pose_.msg_.pose.position.y = EEposition(1);
+    PRIMITIVEpublisher_ee_pose_.msg_.pose.position.z = EEposition(2);
+    PRIMITIVEpublisher_ee_pose_.msg_.pose.orientation.x = dq_SAC(3);
+    PRIMITIVEpublisher_ee_pose_.msg_.pose.orientation.y = dq_SAC(4);
+    PRIMITIVEpublisher_ee_pose_.msg_.pose.orientation.z = dq_SAC(5);
+    PRIMITIVEpublisher_ee_pose_.unlockAndPublish();
   }
 }
 void PRIMITIVEVelocityController::stopping(const ros::Time& /*time*/) {

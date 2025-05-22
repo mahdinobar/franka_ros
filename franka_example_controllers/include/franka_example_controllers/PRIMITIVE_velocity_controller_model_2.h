@@ -35,6 +35,7 @@
 #include "pinocchio/algorithm/jacobian.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
+#include "geometry_msgs/PoseStamped.h"
 
 namespace franka_example_controllers {
 
@@ -79,6 +80,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   franka_hw::TriggerRate rate_trigger_{1000.0};
   realtime_tools::RealtimePublisher<PRIMITIVEmessages> PRIMITIVE_publisher_;
   realtime_tools::RealtimePublisher<geometry_msgs::Vector3Stamped> STEPPERMOTOR_publisher_;
+  realtime_tools::RealtimePublisher<geometry_msgs::PoseStamped> PRIMITIVEpublisher_ee_pose_;
+
   struct Commands {
     double x;
     double y;

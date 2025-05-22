@@ -21,6 +21,7 @@
 #include <iostream>
 #include "geometry_msgs/Vector3.h"
 #include "geometry_msgs/Vector3Stamped.h"
+#include "geometry_msgs/PoseStamped.h"
 #include "std_msgs/Float64MultiArray.h"
 
 #include "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/src/KalmanFilter.cpp"
@@ -64,6 +65,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   franka_hw::TriggerRate rate_trigger_{1000.0};
   realtime_tools::RealtimePublisher<PRIMITIVEmessages> PRIMITIVE_publisher_;
   realtime_tools::RealtimePublisher<geometry_msgs::Vector3Stamped> STEPPERMOTOR_publisher_;
+  realtime_tools::RealtimePublisher<geometry_msgs::PoseStamped> PRIMITIVEpublisher_ee_pose_;
+
   struct Commands {
     double x;
     double y;
