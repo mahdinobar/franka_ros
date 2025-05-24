@@ -6,7 +6,7 @@
 #include <vector>
 
 #include <controller_interface/multi_interface_controller.h>
-#include <franka_example_controllers/PRIMITIVEmessages.h>
+//#include <franka_example_controllers/PRIMITIVEmessages.h>
 #include <franka_hw/franka_cartesian_command_interface.h>
 #include <franka_hw/franka_model_interface.h>
 #include <franka_hw/trigger_rate.h>
@@ -21,6 +21,7 @@
 #include <iostream>
 #include "geometry_msgs/Vector3.h"
 #include "geometry_msgs/Vector3Stamped.h"
+#include "geometry_msgs/PoseStamped.h"
 #include "std_msgs/Float64MultiArray.h"
 
 #include "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/src/KalmanFilter.cpp"
@@ -35,7 +36,6 @@
 #include "pinocchio/algorithm/jacobian.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
-#include "geometry_msgs/PoseStamped.h"
 
 namespace franka_example_controllers {
 
@@ -77,10 +77,13 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   int k_startup_speed_profile = 0;
   int idx_i3 = 0;
   std::array<double, 3> I_e = {0, 0, 0};
-  franka_hw::TriggerRate rate_trigger_{1000.0};
-  realtime_tools::RealtimePublisher<PRIMITIVEmessages> PRIMITIVE_publisher_;
+//  franka_hw::TriggerRate rate_trigger_{1000.0};
+//  realtime_tools::RealtimePublisher<PRIMITIVEmessages> PRIMITIVE_publisher_;
   realtime_tools::RealtimePublisher<geometry_msgs::Vector3Stamped> STEPPERMOTOR_publisher_;
-  realtime_tools::RealtimePublisher<geometry_msgs::PoseStamped> PRIMITIVEpublisher_ee_pose_;
+  realtime_tools::RealtimePublisher<geometry_msgs::Vector3Stamped> publisher_r_star_;
+  realtime_tools::RealtimePublisher<geometry_msgs::PoseStamped> publisher_dq_SAC_;
+  realtime_tools::RealtimePublisher<geometry_msgs::PoseStamped> publisher_dq_PID_;
+  realtime_tools::RealtimePublisher<geometry_msgs::PoseStamped> publisher_filtered_dq_;
 
   struct Commands {
     double x;
@@ -197,7 +200,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::Vector3d delta_EEposition_kinematics;
 
 
-  double alpha_LPF = 0.3; // Smoothing factor of low-pass filter
+  double alpha_LPF = 1.0; // Smoothing factor of low-pass filter
   Eigen::Matrix<double, 7, 1> filtered_dq= {0, 0, 0, 0, 0, 0, 0};
 
 
