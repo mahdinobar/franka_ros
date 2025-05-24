@@ -265,9 +265,9 @@ void FrankaStateController::publishmyFrankaStates(const ros::Time& time) {
     publisher_ee_pose_.msg_.pose.position.x = robot_state_.O_T_EE[12];
     publisher_ee_pose_.msg_.pose.position.y = robot_state_.O_T_EE[13];
     publisher_ee_pose_.msg_.pose.position.z = robot_state_.O_T_EE[14];
-    publisher_ee_pose_.msg_.pose.orientation.x = robot_state_.q[3];
-    publisher_ee_pose_.msg_.pose.orientation.y = robot_state_.q[4];
-    publisher_ee_pose_.msg_.pose.orientation.z = robot_state_.q[5];
+//    publisher_ee_pose_.msg_.pose.orientation.x = robot_state_.q[3];
+//    publisher_ee_pose_.msg_.pose.orientation.y = robot_state_.q[4];
+//    publisher_ee_pose_.msg_.pose.orientation.z = robot_state_.q[5];
     publisher_ee_pose_.unlockAndPublish();
   }
 }
