@@ -25,6 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
         visualization_msgs
         std_msgs
         class_loader
+        actionlib
 )
 
 find_package(Eigen3 REQUIRED)

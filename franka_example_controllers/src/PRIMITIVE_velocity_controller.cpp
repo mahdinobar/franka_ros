@@ -38,11 +38,11 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Vector3.h"
 #include "geometry_msgs/Vector3Stamped.h"
 #include "std_msgs/Float64MultiArray.h"
-#include "geometry_msgs/Vector3Stamped.h"
-#include "geometry_msgs/PoseStamped.h"
+#include "std_msgs/Bool.h"
 
 #include <torch/script.h>
 #include <torch/torch.h>
@@ -60,18 +60,18 @@ Eigen::MatrixXd CSVopen(std::string fileToOpen) {
   int matrixRowNumber = 0;
   while (getline(matrixDataFile,
                  matrixRowString))  // here we read a row by row of matrixDataFile and store every
-                                    // line into the string variable matrixRowString
+  // line into the string variable matrixRowString
   {
     std::stringstream matrixRowStringStream(
         matrixRowString);  // convert matrixRowString that is a string to a stream variable.
 
     while (getline(matrixRowStringStream, matrixEntry,
                    ','))  // here we read pieces of the stream matrixRowStringStream until every
-                          // comma, and store the resulting character into the matrixEntry
+    // comma, and store the resulting character into the matrixEntry
     {
       matrixEntries.push_back(
           stod(matrixEntry));  // here we convert the string to double and fill in the row vector
-                               // storing all the matrix entries
+      // storing all the matrix entries
     }
     matrixRowNumber++;  // update the column numbers
   }
@@ -80,7 +80,7 @@ Eigen::MatrixXd CSVopen(std::string fileToOpen) {
 }
 
 PRIMITIVEVelocityController::PRIMITIVEVelocityController()
-    : command_struct_(), command_struct_EE_() {}
+    : command_struct_(), command_struct_EE_(), gripper_client_("franka_gripper/move", true) {}
 void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Stamped& data) {
   command_struct_.x = data.vector.x;
   command_struct_.y = data.vector.y;
@@ -93,11 +93,11 @@ void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Sta
   command_.writeFromNonRT(command_struct_);
   received_measurement = true;
   if (false) {
-      cout << "Camera measurement received!\n" << endl;
-      cout << "data.x=" << data.vector.x << endl;
-      cout << "data.y=" << data.vector.y << endl;
-      cout << "data.z=" << data.vector.z << endl;
-    }
+    cout << "Camera measurement received!\n" << endl;
+    cout << "data.x=" << data.vector.x << endl;
+    cout << "data.y=" << data.vector.y << endl;
+    cout << "data.z=" << data.vector.z << endl;
+  }
 }
 void PRIMITIVEVelocityController::cmdVelCallback_EE(const geometry_msgs::Vector3Stamped& data) {
   command_struct_EE_.x = data.vector.x;
@@ -175,7 +175,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
                      << ex.what());
     return false;
   }
-//  PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1);
+  //  PRIMITIVE_publisher_.init(node_handle, "PRIMITIVE_messages", 1);
   STEPPERMOTOR_publisher_.init(node_handle, "STEPPERMOTOR_messages", 1);
   publisher_r_star_.init(node_handle, "r_star_messages", 1);
   publisher_dq_SAC_.init(node_handle, "dq_SAC_messages", 1);
@@ -459,6 +459,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
             << translational_jacobian << std::endl;
   cout << "************************************************" << endl;
 
+  gripper_command_publisher_ = node_handle.advertise<std_msgs::Bool>("/gripper_command", 1);
   return true;
 }
 
@@ -503,6 +504,21 @@ void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
   for (int i = 0; i < 10; ++i) {
     torch::jit::IValue warmup_output = actor.forward(observations);
     warmup_output.toTuple()->elements()[0].toTensor();
+  }
+}
+
+void PRIMITIVEVelocityController::openGripper() {
+  franka_gripper::MoveGoal goal;
+  goal.width = 0.08;  // open width in meters (max opening)
+  goal.speed = 0.1;   // opening speed
+
+  ROS_INFO("Sending open command to gripper...");
+  gripper_client_.sendGoal(goal);
+  bool finished_before_timeout = gripper_client_.waitForResult(ros::Duration(5.0));
+  if (finished_before_timeout) {
+    ROS_INFO("Gripper opened successfully.");
+  } else {
+    ROS_WARN("Gripper open command timed out.");
   }
 }
 
@@ -796,36 +812,41 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       pseudoInverse(J_translation_biased, J_translation_pinv_biased);
       dq_command_PID = J_translation_pinv_biased * vc;
 
-//      if (false) {
-//        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-//          for (size_t i = 0; i < 42; ++i) {
-//            PRIMITIVE_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
-//          }
-//          PRIMITIVE_publisher_.unlockAndPublish();
-//        }
-//        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-//          for (size_t i = 0; i < 6; ++i) {
-//            for (size_t j = 0; i < 7; ++j) {
-//              PRIMITIVE_publisher_.msg_.jacobian[i] = jacobian(i, j);
-//            }
-//          }
-//          PRIMITIVE_publisher_.unlockAndPublish();
-//        }
-//        //        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-//        //          for (size_t i = 0; i < 3; ++i) {
-//        //            for (size_t j = 0; j < 7; ++j) {
-//        //              PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] = J_translation(i, j);
-//        //              PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] =
-//        //                  J_translation_pinv_biased(i, j);
-//        //            }
-//        //          }
-//        //          PRIMITIVE_publisher_.unlockAndPublish();
-//        //        }
-//      }
+      //      if (false) {
+      //        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+      //          for (size_t i = 0; i < 42; ++i) {
+      //            PRIMITIVE_publisher_.msg_.jacobian_array[i] = jacobian_array[i];
+      //          }
+      //          PRIMITIVE_publisher_.unlockAndPublish();
+      //        }
+      //        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+      //          for (size_t i = 0; i < 6; ++i) {
+      //            for (size_t j = 0; i < 7; ++j) {
+      //              PRIMITIVE_publisher_.msg_.jacobian[i] = jacobian(i, j);
+      //            }
+      //          }
+      //          PRIMITIVE_publisher_.unlockAndPublish();
+      //        }
+      //        //        if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+      //        //          for (size_t i = 0; i < 3; ++i) {
+      //        //            for (size_t j = 0; j < 7; ++j) {
+      //        //              PRIMITIVE_publisher_.msg_.J_translation[i * 3 + j] =
+      //        J_translation(i, j);
+      //        //              PRIMITIVE_publisher_.msg_.J_translation_pinv[i * 3 + j] =
+      //        //                  J_translation_pinv_biased(i, j);
+      //        //            }
+      //        //          }
+      //        //          PRIMITIVE_publisher_.unlockAndPublish();
+      //        //        }
+      //      }
     }
     k_PID += 1;
   }
 
+  if (k > 2000) {
+    openGripper();  // Replace this with your actual gripper-opening function
+    gripper_opened = true;  // To avoid repeating the command
+  }
   //  TODO should k_startup_speed_profile be updated here or end of call?
   k_startup_speed_profile += 1;  // k_startup_speed_profile for the start_up phase speed profile
 
@@ -852,10 +873,10 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   if (k > 600 and start_up == true) {
     //    TODO this is not necessarily is going to lock
     //    publish message to switch on the conveyor belt
-//    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
+    //    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
     if (STEPPERMOTOR_publisher_.trylock()) {
       STEPPERMOTOR_publisher_.msg_.vector.x = 1;  // send command to trigger stepper motor
-//      STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
+      //      STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
       STEPPERMOTOR_publisher_.unlockAndPublish();
     }
     if (k = 600) {
@@ -1014,7 +1035,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     }
     if (start_up == false) {
       k_SAC += 1;  // TODO ATTENTION: should be after if condition of SAC after startup phase (check
-                   // concept)
+      // concept)
     }
     if (false) {
       std::cout << "==================================" << " \n";
@@ -1086,30 +1107,30 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   k += 1;
   //  TODO can this publish be moved just after command? or more efficiently publish?
   //  if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-//  if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
-//  if (PRIMITIVE_publisher_.trylock()) {
-//    PRIMITIVE_publisher_.msg_.header.stamp = rosTime; //ros::Time::now();
-//    //    dq_command_float = dq_command.cast<float>();
-//    for (size_t i = 0; i < 7; ++i) {
-//      // inner loop 1: k=1ms (1000 Hz)
-//      //      PRIMITIVE_publisher_.msg_.dq_command[i] = dq_command(i);
-//      //      PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
-////      PRIMITIVE_publisher_.msg_.dq_command_PID[i] = dq_command_PID(i);
-//      PRIMITIVE_publisher_.msg_.filtered_dq[i] = filtered_dq(i);
-//      if (i < 6) {
-////        PRIMITIVE_publisher_.msg_.dq_SAC[i] = dq_SAC(i);
-//      }
-//      if (i < 3) {
-////        PRIMITIVE_publisher_.msg_.r_star[i] = r_star(i);
-////        PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
-//        //        PRIMITIVE_publisher_.msg_.EEposition_ob2_test[i] = EEposition_ob2_test(i);
-////        PRIMITIVE_publisher_.msg_.delta_EEposition_kinematics[i] = delta_EEposition_kinematics(i);
-////        PRIMITIVE_publisher_.msg_.e_mismatch_1[i] = e_mismatch_1(i);
-////        PRIMITIVE_publisher_.msg_.e_mismatch_2[i] = e_mismatch_2(i);
-//      }
-//    }
-//    PRIMITIVE_publisher_.unlockAndPublish();
-//  }
+  //  if (rate_trigger_() && PRIMITIVE_publisher_.trylock()) {
+  //  if (PRIMITIVE_publisher_.trylock()) {
+  //    PRIMITIVE_publisher_.msg_.header.stamp = rosTime; //ros::Time::now();
+  //    //    dq_command_float = dq_command.cast<float>();
+  //    for (size_t i = 0; i < 7; ++i) {
+  //      // inner loop 1: k=1ms (1000 Hz)
+  //      //      PRIMITIVE_publisher_.msg_.dq_command[i] = dq_command(i);
+  //      //      PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
+  ////      PRIMITIVE_publisher_.msg_.dq_command_PID[i] = dq_command_PID(i);
+  //      PRIMITIVE_publisher_.msg_.filtered_dq[i] = filtered_dq(i);
+  //      if (i < 6) {
+  ////        PRIMITIVE_publisher_.msg_.dq_SAC[i] = dq_SAC(i);
+  //      }
+  //      if (i < 3) {
+  ////        PRIMITIVE_publisher_.msg_.r_star[i] = r_star(i);
+  ////        PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
+  //        //        PRIMITIVE_publisher_.msg_.EEposition_ob2_test[i] = EEposition_ob2_test(i);
+  ////        PRIMITIVE_publisher_.msg_.delta_EEposition_kinematics[i] =
+  ///delta_EEposition_kinematics(i); /        PRIMITIVE_publisher_.msg_.e_mismatch_1[i] =
+  ///e_mismatch_1(i); /        PRIMITIVE_publisher_.msg_.e_mismatch_2[i] = e_mismatch_2(i);
+  //      }
+  //    }
+  //    PRIMITIVE_publisher_.unlockAndPublish();
+  //  }
   if (publisher_r_star_.trylock()) {
     publisher_r_star_.msg_.vector.x = r_star(0);
     publisher_r_star_.msg_.vector.y = r_star(1);

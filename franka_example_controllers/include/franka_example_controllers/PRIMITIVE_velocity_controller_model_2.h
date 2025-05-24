@@ -24,6 +24,8 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "std_msgs/Float64MultiArray.h"
 
+#include "std_msgs/Bool.h"
+
 #include "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/src/KalmanFilter.cpp"
 #include "franka_example_controllers/KalmanFilter.h"
 
@@ -36,6 +38,9 @@
 #include "pinocchio/algorithm/jacobian.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
+
+#include <actionlib/client/simple_action_client.h>
+#include <franka_gripper/MoveAction.h>
 
 namespace franka_example_controllers {
 
@@ -132,6 +137,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
                                          {0, 0, 0, 1}};
   void cmdVelCallback(const geometry_msgs::Vector3Stamped& data);
   void cmdVelCallback_EE(const geometry_msgs::Vector3Stamped& data);
+  void openGripper();
+  actionlib::SimpleActionClient<franka_gripper::MoveAction> gripper_client_;
   void cmdVelCallback2(const std_msgs::Float64MultiArray& command);
   Eigen::Vector<double, 3> drift = {0, 0, 0};
   Eigen::Vector<double, 3> p_hat_w{0, 0, 0};
@@ -206,6 +213,9 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
 
   double K_p = 1;
   double K_i = 0.1;
+
+  bool gripper_opened = false;
+  ros::Publisher gripper_command_publisher_;
 };
 
 }  // namespace franka_example_controllers
