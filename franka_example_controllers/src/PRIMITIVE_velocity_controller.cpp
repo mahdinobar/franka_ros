@@ -1126,12 +1126,12 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     publisher_dq_SAC_.unlockAndPublish();
   }
   if (publisher_dq_PID_.trylock()) {
-    publisher_dq_PID_.msg_.pose.position.x = dq_SAC(0);
-    publisher_dq_PID_.msg_.pose.position.y = dq_SAC(1);
-    publisher_dq_PID_.msg_.pose.position.z = dq_SAC(2);
-    publisher_dq_PID_.msg_.pose.orientation.x = dq_SAC(3);
-    publisher_dq_PID_.msg_.pose.orientation.y = dq_SAC(4);
-    publisher_dq_PID_.msg_.pose.orientation.z = dq_SAC(5);
+    publisher_dq_PID_.msg_.pose.position.x = dq_command_PID(0);
+    publisher_dq_PID_.msg_.pose.position.y = dq_command_PID(1);
+    publisher_dq_PID_.msg_.pose.position.z = dq_command_PID(2);
+    publisher_dq_PID_.msg_.pose.orientation.x = dq_command_PID(3);
+    publisher_dq_PID_.msg_.pose.orientation.y = dq_command_PID(4);
+    publisher_dq_PID_.msg_.pose.orientation.z = dq_command_PID(5);
     publisher_dq_PID_.unlockAndPublish();
   }
 
