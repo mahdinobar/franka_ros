@@ -514,12 +514,12 @@ void PRIMITIVEVelocityController::openGripper() {
 
   ROS_INFO("Sending open command to gripper...");
   gripper_client_.sendGoal(goal);
-  bool finished_before_timeout = gripper_client_.waitForResult(ros::Duration(5.0));
-  if (finished_before_timeout) {
-    ROS_INFO("Gripper opened successfully.");
-  } else {
-    ROS_WARN("Gripper open command timed out.");
-  }
+//  bool finished_before_timeout = gripper_client_.waitForResult(ros::Duration(5.0));
+//  if (finished_before_timeout) {
+//    ROS_INFO("Gripper opened successfully.");
+//  } else {
+//    ROS_WARN("Gripper open command timed out.");
+//  }
 }
 
 void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Duration& period) {
@@ -843,7 +843,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     k_PID += 1;
   }
 
-  if (k > 2000) {
+  if (k > 2000 && k < 2500) {
     openGripper();  // Replace this with your actual gripper-opening function
     gripper_opened = true;  // To avoid repeating the command
   }
