@@ -184,8 +184,8 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
 
   sub_command_ =
       node_handle.subscribe("/p_hat_w", 100, &PRIMITIVEVelocityController::cmdVelCallback, this);
-  sub_command_EE_ = node_handle.subscribe("/p_hat_EE_w", 100,
-                                          &PRIMITIVEVelocityController::cmdVelCallback_EE, this);
+//  sub_command_EE_ = node_handle.subscribe("/p_hat_EE_w", 100,
+//                                          &PRIMITIVEVelocityController::cmdVelCallback_EE, this);
   ros::spinOnce();
 
   //  position_joint_interface_ = robot_hardware->get<hardware_interface::PositionJointInterface>();
@@ -539,22 +539,22 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   } catch (int N) {
     std::cout << "ERROR: CANNOT hear p_hat_w!" << "\n";
   }
-  //    camera end effector measurement subscription
-  try {
-    Commands curr_cmd_EE = *(command_EE_.readFromRT());
-    //      TODO Pay attention: here we correct the camere raw measurements offsets
-    // ATTENTION: based on primitive 50 camera estimation of upper edge corner of April tag:
-    // offset is {-0.06, +2.99, -0.12};
-    p_hat_EE_w(0) = (curr_cmd_EE.x - 0.06) / 1000;
-    p_hat_EE_w(1) = (curr_cmd_EE.y + 2.99) / 1000;
-    p_hat_EE_w(2) = (curr_cmd_EE.z - 0.12) / 1000;
-    // TODO
-    double t_measurement_EE = curr_cmd_EE.t_stamp_camera_measurement;
-    dt_EE = (t_measurement_EE - t_0_EE) * 1000;  //[ms]
-    t_0_EE = t_measurement_EE;
-  } catch (int N) {
-    std::cout << "ERROR: CANNOT hear p_hat_EE_w!" << "\n";
-  }
+//  //    camera end effector measurement subscription
+//  try {
+//    Commands curr_cmd_EE = *(command_EE_.readFromRT());
+//    //      TODO Pay attention: here we correct the camere raw measurements offsets
+//    // ATTENTION: based on primitive 50 camera estimation of upper edge corner of April tag:
+//    // offset is {-0.06, +2.99, -0.12};
+//    p_hat_EE_w(0) = (curr_cmd_EE.x - 0.06) / 1000;
+//    p_hat_EE_w(1) = (curr_cmd_EE.y + 2.99) / 1000;
+//    p_hat_EE_w(2) = (curr_cmd_EE.z - 0.12) / 1000;
+//    // TODO
+//    double t_measurement_EE = curr_cmd_EE.t_stamp_camera_measurement;
+//    dt_EE = (t_measurement_EE - t_0_EE) * 1000;  //[ms]
+//    t_0_EE = t_measurement_EE;
+//  } catch (int N) {
+//    std::cout << "ERROR: CANNOT hear p_hat_EE_w!" << "\n";
+//  }
 
   double dt_fast = 0.001 * (1000 / freq_fast);  // [s]
   //  //    TODO check joints_pose_ updates and i.c. is correct

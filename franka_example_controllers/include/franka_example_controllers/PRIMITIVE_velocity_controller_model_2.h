@@ -100,9 +100,9 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   realtime_tools::RealtimeBuffer<Commands> command_;
   realtime_tools::RealtimeBuffer<Commands> command_EE_;
   Commands command_struct_;
-  Commands command_struct_EE_;
+//  Commands command_struct_EE_;
   ros::Subscriber sub_command_;
-  ros::Subscriber sub_command_EE_;
+//  ros::Subscriber sub_command_EE_;
   bool allow_multiple_cmd_vel_publishers_;
   const bool debug = false;
   static const int Target_Traj_ROWS = 6381;
