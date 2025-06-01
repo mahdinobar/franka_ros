@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
   controller_manager::ControllerManager control_manager(&franka_control, public_node_handle);
 
   // Start background threads for message handling
-  ros::AsyncSpinner spinner(4);
+  ros::AsyncSpinner spinner(6);
   spinner.start();
 
   while (ros::ok()) {

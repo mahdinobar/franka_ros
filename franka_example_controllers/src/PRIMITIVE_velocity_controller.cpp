@@ -41,8 +41,8 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Vector3.h"
 #include "geometry_msgs/Vector3Stamped.h"
-#include "std_msgs/Float64MultiArray.h"
 #include "std_msgs/Bool.h"
+#include "std_msgs/Float64MultiArray.h"
 
 #include <torch/script.h>
 #include <torch/torch.h>
@@ -79,8 +79,10 @@ Eigen::MatrixXd CSVopen(std::string fileToOpen) {
       matrixEntries.data(), matrixRowNumber, matrixEntries.size() / matrixRowNumber);
 }
 
+// PRIMITIVEVelocityController::PRIMITIVEVelocityController()
+//     : command_struct_(), command_struct_EE_(), gripper_client_("franka_gripper/move", true) {}
 PRIMITIVEVelocityController::PRIMITIVEVelocityController()
-    : command_struct_(), command_struct_EE_(), gripper_client_("franka_gripper/move", true) {}
+    : command_struct_(), gripper_client_("franka_gripper/move", true) {}
 void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Stamped& data) {
   command_struct_.x = data.vector.x;
   command_struct_.y = data.vector.y;
@@ -90,31 +92,35 @@ void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Sta
   //  TODO map?
   //  command_struct_.stamp = ros::Time::now();
   command_struct_.t_stamp_camera_measurement = data.header.stamp.toSec();
+//  command_struct_.t_stamp_camera_measurement = ros::Time::now().toSec();
   command_.writeFromNonRT(command_struct_);
   received_measurement = true;
-  if (false) {
+  if (true) {
     cout << "Camera measurement received!\n" << endl;
     cout << "data.x=" << data.vector.x << endl;
     cout << "data.y=" << data.vector.y << endl;
     cout << "data.z=" << data.vector.z << endl;
+    cout << "command_struct_.t_stamp_camera_measurement="
+         << command_struct_.t_stamp_camera_measurement << endl;
   }
 }
-void PRIMITIVEVelocityController::cmdVelCallback_EE(const geometry_msgs::Vector3Stamped& data) {
-  command_struct_EE_.x = data.vector.x;
-  command_struct_EE_.y = data.vector.y;
-  //  TODO pay attention
-  command_struct_EE_.z = data.vector.z;
-  //  TODO correct time stamp must be immediately after capturing data?e.g.,timestamp of the depth
-  //  TODO map?
-  //  command_struct_.stamp = ros::Time::now();
-  command_struct_EE_.t_stamp_camera_measurement = data.header.stamp.toSec();
-  command_EE_.writeFromNonRT(command_struct_EE_);
-  received_measurement_EE = true;
-  cout << "Camera EE measurement received!!\n" << endl;
-  cout << "data_EE.x=" << data.vector.x << endl;
-  cout << "data_EE.y=" << data.vector.y << endl;
-  cout << "data_EE.z=" << data.vector.z << endl;
-}
+// void PRIMITIVEVelocityController::cmdVelCallback_EE(const geometry_msgs::Vector3Stamped& data) {
+//   command_struct_EE_.x = data.vector.x;
+//   command_struct_EE_.y = data.vector.y;
+//   //  TODO pay attention
+//   command_struct_EE_.z = data.vector.z;
+//   //  TODO correct time stamp must be immediately after capturing data?e.g.,timestamp of the
+//   depth
+//   //  TODO map?
+//   //  command_struct_.stamp = ros::Time::now();
+//   command_struct_EE_.t_stamp_camera_measurement = data.header.stamp.toSec();
+//   command_EE_.writeFromNonRT(command_struct_EE_);
+//   received_measurement_EE = true;
+//   cout << "Camera EE measurement received!!\n" << endl;
+//   cout << "data_EE.x=" << data.vector.x << endl;
+//   cout << "data_EE.y=" << data.vector.y << endl;
+//   cout << "data_EE.z=" << data.vector.z << endl;
+// }
 
 bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardware,
                                        ros::NodeHandle& node_handle) {
@@ -184,8 +190,9 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
 
   sub_command_ =
       node_handle.subscribe("/p_hat_w", 100, &PRIMITIVEVelocityController::cmdVelCallback, this);
-//  sub_command_EE_ = node_handle.subscribe("/p_hat_EE_w", 100,
-//                                          &PRIMITIVEVelocityController::cmdVelCallback_EE, this);
+  //  sub_command_EE_ = node_handle.subscribe("/p_hat_EE_w", 100,
+  //                                          &PRIMITIVEVelocityController::cmdVelCallback_EE,
+  //                                          this);
   ros::spinOnce();
 
   //  position_joint_interface_ = robot_hardware->get<hardware_interface::PositionJointInterface>();
@@ -514,47 +521,61 @@ void PRIMITIVEVelocityController::openGripper() {
 
   ROS_INFO("Sending open command to gripper...");
   gripper_client_.sendGoal(goal);
-//  bool finished_before_timeout = gripper_client_.waitForResult(ros::Duration(5.0));
-//  if (finished_before_timeout) {
-//    ROS_INFO("Gripper opened successfully.");
-//  } else {
-//    ROS_WARN("Gripper open command timed out.");
-//  }
+  //  bool finished_before_timeout = gripper_client_.waitForResult(ros::Duration(5.0));
+  //  if (finished_before_timeout) {
+  //    ROS_INFO("Gripper opened successfully.");
+  //  } else {
+  //    ROS_WARN("Gripper open command timed out.");
+  //  }
 }
 
 void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Duration& period) {
   //    camera target measurement subscription
-  try {
-    Commands curr_cmd = *(command_.readFromRT());
-    //      TODO Pay attention: here we correct the camere raw measurements offsets
-    // ATTENTION: based on primitive 50 camera estimation of upper edge corner of April tag:
-    // offset is {-0.06, +2.99, -0.12};
-    p_hat_w(0) = (curr_cmd.x + 20.5 - 0.06) / 1000;
-    p_hat_w(1) = (curr_cmd.y + 25 + 2.99) / 1000;
-    p_hat_w(2) = (curr_cmd.z + 39 - 0.12) / 1000;
-    // TODO
-    double t_measurement = curr_cmd.t_stamp_camera_measurement;
-    dt = (t_measurement - t_0) * 1000;  //[ms]
-    t_0 = t_measurement;
-  } catch (int N) {
-    std::cout << "ERROR: CANNOT hear p_hat_w!" << "\n";
+  cout << "k=" << k << endl;
+  if (received_measurement == true) {
+    try {
+      Commands curr_cmd = *(command_.readFromRT());
+      //      TODO Pay attention: here we correct the camere raw measurements offsets
+      // ATTENTION: based on primitive 50 camera estimation of upper edge corner of April tag:
+      // offset is {-0.06, +2.99, -0.12};
+      p_hat_w(0) = (curr_cmd.x + 20.5 - 0.06) / 1000;
+      p_hat_w(1) = (curr_cmd.y + 25 + 2.99) / 1000;
+      p_hat_w(2) = (curr_cmd.z + 39 - 0.12) / 1000;
+      // TODO
+      double t_measurement = curr_cmd.t_stamp_camera_measurement;
+      dt = (t_measurement - t_0) * 1000;  //[ms]
+      if (true) {
+        cout << "++++++++++++++++++++++++++++++\n" << endl;
+        cout << "Camera measurements CORRECTED!\n" << endl;
+        //        cout << "k=" << k << endl;
+        cout << "p_hat_w(0)=" << p_hat_w(0) << endl;
+        cout << "p_hat_w(1)=" << p_hat_w(1) << endl;
+        cout << "p_hat_w(2)=" << p_hat_w(2) << endl;
+        //        cout << "t_measurement=" << t_measurement << endl;
+        //        cout << "t_0=" << t_0 << endl;
+        cout << "dt=" << dt << endl;
+      }
+      t_0 = t_measurement;
+    } catch (int N) {
+      std::cout << "ERROR: CANNOT hear p_hat_w!" << "\n";
+    }
   }
-//  //    camera end effector measurement subscription
-//  try {
-//    Commands curr_cmd_EE = *(command_EE_.readFromRT());
-//    //      TODO Pay attention: here we correct the camere raw measurements offsets
-//    // ATTENTION: based on primitive 50 camera estimation of upper edge corner of April tag:
-//    // offset is {-0.06, +2.99, -0.12};
-//    p_hat_EE_w(0) = (curr_cmd_EE.x - 0.06) / 1000;
-//    p_hat_EE_w(1) = (curr_cmd_EE.y + 2.99) / 1000;
-//    p_hat_EE_w(2) = (curr_cmd_EE.z - 0.12) / 1000;
-//    // TODO
-//    double t_measurement_EE = curr_cmd_EE.t_stamp_camera_measurement;
-//    dt_EE = (t_measurement_EE - t_0_EE) * 1000;  //[ms]
-//    t_0_EE = t_measurement_EE;
-//  } catch (int N) {
-//    std::cout << "ERROR: CANNOT hear p_hat_EE_w!" << "\n";
-//  }
+  //  //    camera end effector measurement subscription
+  //  try {
+  //    Commands curr_cmd_EE = *(command_EE_.readFromRT());
+  //    //      TODO Pay attention: here we correct the camere raw measurements offsets
+  //    // ATTENTION: based on primitive 50 camera estimation of upper edge corner of April tag:
+  //    // offset is {-0.06, +2.99, -0.12};
+  //    p_hat_EE_w(0) = (curr_cmd_EE.x - 0.06) / 1000;
+  //    p_hat_EE_w(1) = (curr_cmd_EE.y + 2.99) / 1000;
+  //    p_hat_EE_w(2) = (curr_cmd_EE.z - 0.12) / 1000;
+  //    // TODO
+  //    double t_measurement_EE = curr_cmd_EE.t_stamp_camera_measurement;
+  //    dt_EE = (t_measurement_EE - t_0_EE) * 1000;  //[ms]
+  //    t_0_EE = t_measurement_EE;
+  //  } catch (int N) {
+  //    std::cout << "ERROR: CANNOT hear p_hat_EE_w!" << "\n";
+  //  }
 
   double dt_fast = 0.001 * (1000 / freq_fast);  // [s]
   //  //    TODO check joints_pose_ updates and i.c. is correct
@@ -608,6 +629,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       v_star[i] = v_star_dir[i] / norm_v_star_dir * v_star_dir_length;
       r_star(i) = dt_fast * v_star[i] + r_star(i);
     }
+    received_measurement=false;
   } else if (start_up == false) {
     //  TODO how can you make KF conditions especially initially more efficient?
     if (received_measurement == true and dt > 0) {
@@ -844,7 +866,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   }
 
   if (k > 2000 && k < 2500) {
-    openGripper();  // Replace this with your actual gripper-opening function
+    openGripper();          // Replace this with your actual gripper-opening function
     gripper_opened = true;  // To avoid repeating the command
   }
   //  TODO should k_startup_speed_profile be updated here or end of call?
@@ -870,7 +892,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //    if (std::abs(e_EE_target[1]) < 0.020801 and start_up == true) {
   //  TODO improve temporary solution: due to delay manually approximated corrosponding startup
   //  phase, trigger motor after k~730[ms]
-  if (k > 600 and start_up == true) {
+  if (k > 758 and start_up == true) {
     //    TODO this is not necessarily is going to lock
     //    publish message to switch on the conveyor belt
     //    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
@@ -879,9 +901,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       //      STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
       STEPPERMOTOR_publisher_.unlockAndPublish();
     }
-    if (k = 600) {
-      std::cout << "Triggered stepper motor sooner!" << endl;
-    }
+    std::cout << "Triggered stepper motor sooner!" << endl;
   }
 
   //  end startup phase if you reach below 1 mm distance to initial condition
@@ -898,6 +918,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       }
     }
     start_up = false;
+//    received_measurement = false;
     std::cout << "Reached end of start-up phase!" << endl;
     // TODO ATTENTION: initialize KF at initial position
     X_prediction_ahead = EEposition;
@@ -1077,13 +1098,15 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //      STEPPERMOTOR_publisher_.msg_.header.stamp=ros::Time::now();
     //      STEPPERMOTOR_publisher_.unlockAndPublish();
     //    }
+
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
       dq_command(i) = dq_command_PID(i) + dq_SAC(i);
       //      dq_command(i) = dq_command_PID(i);
+
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
-        if (true) {
+        if (false) {
           std::cout << "------------At joint i=" << i << "\n";
           std::cout << "JOINT LIMIT HIT!" << endl;
           std::cout << "dq_command(i)" << dq_command(i) << "\n";
@@ -1125,8 +1148,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   ////        PRIMITIVE_publisher_.msg_.EEposition[i] = EEposition(i);
   //        //        PRIMITIVE_publisher_.msg_.EEposition_ob2_test[i] = EEposition_ob2_test(i);
   ////        PRIMITIVE_publisher_.msg_.delta_EEposition_kinematics[i] =
-  ///delta_EEposition_kinematics(i); /        PRIMITIVE_publisher_.msg_.e_mismatch_1[i] =
-  ///e_mismatch_1(i); /        PRIMITIVE_publisher_.msg_.e_mismatch_2[i] = e_mismatch_2(i);
+  /// delta_EEposition_kinematics(i); /        PRIMITIVE_publisher_.msg_.e_mismatch_1[i] =
+  /// e_mismatch_1(i); /        PRIMITIVE_publisher_.msg_.e_mismatch_2[i] = e_mismatch_2(i);
   //      }
   //    }
   //    PRIMITIVE_publisher_.unlockAndPublish();
