@@ -68,6 +68,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   std::unique_ptr<franka_hw::FrankaModelHandle> model_handle_;
   ros::Duration elapsed_time_;
   double t_0;
+  double t_0_;
+  double t_0_2_;
   double t_0_EE;
   std::array<double, 7> initial_pose_{};
   std::array<double, 7> joints_pose_{};
@@ -76,6 +78,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   std::unique_ptr<franka_hw::FrankaStateHandle> state_handle_;  // seems to be franka_states
   //  TODO check
   int k = 0;
+  double k_timer = 0;
+
   int delay_SAC = 0;
   int k_SAC = 0;
   int k_PID = 0;
@@ -154,12 +158,15 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::Matrix<double, 3, 1> B{{0}, {1}, {0}};
   Eigen::Matrix<double, 3, 3> C{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
   // covariance matrix of the state estimation error P0- abbreviated as "state covariance matrix"
-  Eigen::Matrix<double, 3, 3> P0{{1, 0, 0}, {0, 4, 0}, {0, 0, 1}};
+//  Eigen::Matrix<double, 3, 3> P0{{1, 0, 0}, {0, 4, 0}, {0, 0, 1}};
+  Eigen::Matrix<double, 3, 3> P0{{0.04e-6, 0, 0}, {0, 0.09e-6, 0}, {0, 0, 0.04e-6}}; // [m^2]
 
   // covariance matrix of the measurement noise
-  Eigen::Matrix<double, 3, 3> R{{4, 0, 0}, {0, 25, 0}, {0, 0, 4}};
+//  Eigen::Matrix<double, 3, 3> R{{4, 0, 0}, {0, 25, 0}, {0, 0, 4}};
+  Eigen::Matrix<double, 3, 3> R{{0.0625e-6, 0, 0}, {0, 0.0625e-6, 0}, {0, 0, 0.0625e-6}}; // [m^2]
   // covariance matrix of the state disturbance
-  Eigen::Matrix<double, 3, 3> Q{{1, 0, 0}, {0, 4, 0}, {0, 0, 1}};
+//  Eigen::Matrix<double, 3, 3> Q{{1, 0, 0}, {0, 4, 0}, {0, 0, 1}};
+  Eigen::Matrix<double, 3, 3> Q{{0.01e-6, 0, 0}, {0, 0.04e-6, 0}, {0, 0, 0.02e-6}}; // [m^2]
   // guess of the initial state estimate
   //  Eigen::Matrix<double, 3, 1> x0 = r_star_tf_start_up;
   // ATTENTION to dimension
@@ -216,6 +223,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
 
   bool gripper_opened = false;
   ros::Publisher gripper_command_publisher_;
+
 };
 
 }  // namespace franka_example_controllers

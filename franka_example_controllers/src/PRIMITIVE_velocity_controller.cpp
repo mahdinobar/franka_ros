@@ -472,6 +472,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
 
 void PRIMITIVEVelocityController::starting(const ros::Time& /* time */) {
   t_0 = ros::Time::now().toSec();
+  t_0_ = ros::Time::now().toSec();
   //  ros::Time t_check = ros::Time::now();
   //  cout << "t_0=" << t_0 << endl;
   //  cout << "t_check=" << t_check << endl;
@@ -531,7 +532,10 @@ void PRIMITIVEVelocityController::openGripper() {
 
 void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Duration& period) {
   //    camera target measurement subscription
-  cout << "k=" << k << endl;
+
+  if (k % 10 == 0) {
+    cout << "k=" << k << endl;
+  };
   if (received_measurement == true) {
     try {
       Commands curr_cmd = *(command_.readFromRT());
@@ -541,12 +545,14 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       p_hat_w(0) = (curr_cmd.x + 20.5 - 0.06) / 1000;
       p_hat_w(1) = (curr_cmd.y + 25 + 2.99) / 1000;
       p_hat_w(2) = (curr_cmd.z + 39 - 0.12) / 1000;
-      // TODO
-      double t_measurement = curr_cmd.t_stamp_camera_measurement;
-      dt = (t_measurement - t_0) * 1000;  //[ms]
+//      // TODO
+//      double t_measurement = curr_cmd.t_stamp_camera_measurement;
+//      dt = (t_measurement - t_0) * 1000;  //[ms]
+      double dt = (k-k_timer); // [ms]
+      k_timer=k;
       if (true) {
-        cout << "++++++++++++++++++++++++++++++\n" << endl;
-        cout << "Camera measurements CORRECTED!\n" << endl;
+        cout << "++++++++++++++++++++++++++++++++++++++++++++" << endl;
+        cout << "Camera measurements CORRECTED!" << endl;
         //        cout << "k=" << k << endl;
         cout << "p_hat_w(0)=" << p_hat_w(0) << endl;
         cout << "p_hat_w(1)=" << p_hat_w(1) << endl;
@@ -555,7 +561,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
         //        cout << "t_0=" << t_0 << endl;
         cout << "dt=" << dt << endl;
       }
-      t_0 = t_measurement;
+//      t_0 = t_measurement;
     } catch (int N) {
       std::cout << "ERROR: CANNOT hear p_hat_w!" << "\n";
     }
@@ -749,9 +755,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       v_star[2] = X_prediction_ahead(5) * 1000;
     }
     if (MODEL_2) {
-      r_star(0) = X_prediction_ahead(0);
-      r_star(1) = X_prediction_ahead(1);
-      r_star(2) = X_prediction_ahead(2);
+      r_star(0) = X_prediction_ahead(0); // [m]
+      r_star(1) = X_prediction_ahead(1); // [m]
+      r_star(2) = X_prediction_ahead(2); // [m]
       v_star[0] = 0;
       v_star[1] = u(0, 0) * 1000;  //[m/s]
       v_star[2] = 0;
@@ -865,10 +871,10 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     k_PID += 1;
   }
 
-  if (k > 2000 && k < 2500) {
-    openGripper();          // Replace this with your actual gripper-opening function
-    gripper_opened = true;  // To avoid repeating the command
-  }
+//  if (k > 2000 && k < 2500) {
+//    openGripper();          // Replace this with your actual gripper-opening function
+//    gripper_opened = true;  // To avoid repeating the command
+//  }
   //  TODO should k_startup_speed_profile be updated here or end of call?
   k_startup_speed_profile += 1;  // k_startup_speed_profile for the start_up phase speed profile
 
@@ -892,7 +898,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //    if (std::abs(e_EE_target[1]) < 0.020801 and start_up == true) {
   //  TODO improve temporary solution: due to delay manually approximated corrosponding startup
   //  phase, trigger motor after k~730[ms]
-  if (k > 758 and start_up == true) {
+  if (k > 320 and start_up == true) {
     //    TODO this is not necessarily is going to lock
     //    publish message to switch on the conveyor belt
     //    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
@@ -923,6 +929,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     // TODO ATTENTION: initialize KF at initial position
     X_prediction_ahead = EEposition;
     estimatesAposteriori = EEposition;
+    k_timer = k;
 
     //    //    TODO this is not necessarily is going to lock
     //    //    publish message to switch on the conveyor belt
