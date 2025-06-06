@@ -218,7 +218,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::Matrix<double, 7, 1> filtered_dq= {0, 0, 0, 0, 0, 0, 0};
 
 
-  double K_p = 1;
+  double K_p = 1.0;
   double K_i = 0.1;
 
   bool gripper_opened = false;

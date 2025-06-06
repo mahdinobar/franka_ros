@@ -92,10 +92,10 @@ void PRIMITIVEVelocityController::cmdVelCallback(const geometry_msgs::Vector3Sta
   //  TODO map?
   //  command_struct_.stamp = ros::Time::now();
   command_struct_.t_stamp_camera_measurement = data.header.stamp.toSec();
-//  command_struct_.t_stamp_camera_measurement = ros::Time::now().toSec();
+  //  command_struct_.t_stamp_camera_measurement = ros::Time::now().toSec();
   command_.writeFromNonRT(command_struct_);
   received_measurement = true;
-  if (true) {
+  if (false) {
     cout << "Camera measurement received!\n" << endl;
     cout << "data.x=" << data.vector.x << endl;
     cout << "data.y=" << data.vector.y << endl;
@@ -532,10 +532,11 @@ void PRIMITIVEVelocityController::openGripper() {
 
 void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Duration& period) {
   //    camera target measurement subscription
-
-  if (k % 10 == 0) {
-    cout << "k=" << k << endl;
-  };
+  if (false) {
+    if (k % 10 == 0) {
+      cout << "k=" << k << endl;
+    };
+  }
   if (received_measurement == true) {
     try {
       Commands curr_cmd = *(command_.readFromRT());
@@ -545,12 +546,12 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       p_hat_w(0) = (curr_cmd.x + 20.5 - 0.06) / 1000;
       p_hat_w(1) = (curr_cmd.y + 25 + 2.99) / 1000;
       p_hat_w(2) = (curr_cmd.z + 39 - 0.12) / 1000;
-//      // TODO
-//      double t_measurement = curr_cmd.t_stamp_camera_measurement;
-//      dt = (t_measurement - t_0) * 1000;  //[ms]
-      double dt = (k-k_timer); // [ms]
-      k_timer=k;
-      if (true) {
+      //      // TODO
+      //      double t_measurement = curr_cmd.t_stamp_camera_measurement;
+      //      dt = (t_measurement - t_0) * 1000;  //[ms]
+      double dt = (k - k_timer);  // [ms]
+      k_timer = k;
+      if (false) {
         cout << "++++++++++++++++++++++++++++++++++++++++++++" << endl;
         cout << "Camera measurements CORRECTED!" << endl;
         //        cout << "k=" << k << endl;
@@ -561,7 +562,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
         //        cout << "t_0=" << t_0 << endl;
         cout << "dt=" << dt << endl;
       }
-//      t_0 = t_measurement;
+      //      t_0 = t_measurement;
     } catch (int N) {
       std::cout << "ERROR: CANNOT hear p_hat_w!" << "\n";
     }
@@ -635,7 +636,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       v_star[i] = v_star_dir[i] / norm_v_star_dir * v_star_dir_length;
       r_star(i) = dt_fast * v_star[i] + r_star(i);
     }
-    received_measurement=false;
+    received_measurement = false;
   } else if (start_up == false) {
     //  TODO how can you make KF conditions especially initially more efficient?
     if (received_measurement == true and dt > 0) {
@@ -755,9 +756,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       v_star[2] = X_prediction_ahead(5) * 1000;
     }
     if (MODEL_2) {
-      r_star(0) = X_prediction_ahead(0); // [m]
-      r_star(1) = X_prediction_ahead(1); // [m]
-      r_star(2) = X_prediction_ahead(2); // [m]
+      r_star(0) = X_prediction_ahead(0);  // [m]
+      r_star(1) = X_prediction_ahead(1);  // [m]
+      r_star(2) = X_prediction_ahead(2);  // [m]
       v_star[0] = 0;
       v_star[1] = u(0, 0) * 1000;  //[m/s]
       v_star[2] = 0;
@@ -871,10 +872,10 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     k_PID += 1;
   }
 
-//  if (k > 2000 && k < 2500) {
-//    openGripper();          // Replace this with your actual gripper-opening function
-//    gripper_opened = true;  // To avoid repeating the command
-//  }
+  //  if (k > 2000 && k < 2500) {
+  //    openGripper();          // Replace this with your actual gripper-opening function
+  //    gripper_opened = true;  // To avoid repeating the command
+  //  }
   //  TODO should k_startup_speed_profile be updated here or end of call?
   k_startup_speed_profile += 1;  // k_startup_speed_profile for the start_up phase speed profile
 
@@ -924,7 +925,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       }
     }
     start_up = false;
-//    received_measurement = false;
+    //    received_measurement = false;
     std::cout << "Reached end of start-up phase!" << endl;
     // TODO ATTENTION: initialize KF at initial position
     X_prediction_ahead = EEposition;
