@@ -214,7 +214,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   // Load your serialized model --- SAC Actor Neural Network
   actor = torch::jit::load(
       "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/config/"
-      "traced_model_Cpp_Fep_HW_274_double.pt");
+      "traced_model_Cpp_Fep_HW_284_double.pt");
   std::cout << "+++++Actor model loaded successfully.+++++" << std::endl;
   //  torch::Tensor input_tensor = torch::ones({1, 27});  // Example random tensor
   //  // Wrap inputs in a vector of torch::jit::IValue
@@ -1024,7 +1024,18 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       //      obs_data[24] = dq_command_PID(3);
       //      obs_data[25] = dq_command_PID(4);
       //      obs_data[26] = dq_command_PID(5);
-
+      obs_data[21] = dq_SAC(0);
+      obs_data[22] = dq_SAC(1);
+      obs_data[23] = dq_SAC(2);
+      obs_data[24] = dq_SAC(3);
+      obs_data[25] = dq_SAC(4);
+      obs_data[26] = dq_SAC(5);
+      if (true) {
+        std::cout << "###################################\n";
+        std::cout << "k=" << k << "\n";
+        std::cout << "obs_data=" << obs_data << "\n";
+        std::cout << "dq_SAC=" << dq_SAC << "\n";
+      }
       // Run the model's forward pass without re-pushing to observations
       torch::jit::IValue output = actor.forward(observations);
 
@@ -1040,6 +1051,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       //      dq_SAC_map(output_tensor.data_ptr<double>()); dq_SAC = dq_SAC_map;  // Copy mapped
       //      data to dq_SAC
       Eigen::Map<Eigen::Matrix<double, 1, 6>>(output_tensor.data_ptr<double>()).swap(dq_SAC);
+
       if (false) {
         std::cout << "++++++++++++++++++++++\n";
         std::cout << "dq_SAC updated!!!\n";
