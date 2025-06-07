@@ -899,7 +899,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //    if (std::abs(e_EE_target[1]) < 0.020801 and start_up == true) {
   //  TODO improve temporary solution: due to delay manually approximated corrosponding startup
   //  phase, trigger motor after k~730[ms]
-  if (k > 320 and start_up == true) {
+  if (k > 350 and start_up == true) {
     //    TODO this is not necessarily is going to lock
     //    publish message to switch on the conveyor belt
     //    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
@@ -984,9 +984,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     if (k_SAC % (1000 / freq_SAC) == 0 and start_up == false) {
       // Directly access obs data pointer to modify values without reallocation
       double* obs_data = obs.data_ptr<double>();
-      obs_data[0] = e_t.at(0);
-      obs_data[1] = e_t.at(1);
-      obs_data[2] = e_t.at(2);
+      obs_data[0] = e_t.at(0)*1000;
+      obs_data[1] = e_t.at(1)*1000;
+      obs_data[2] = e_t.at(2)*1000;
       obs_data[3] = q(0);
       obs_data[4] = q(1);
       obs_data[5] = q(2);
@@ -1030,10 +1030,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       obs_data[24] = dq_SAC(3);
       obs_data[25] = dq_SAC(4);
       obs_data[26] = dq_SAC(5);
-      if (true) {
+      if (false) {
         std::cout << "###################################\n";
         std::cout << "k=" << k << "\n";
-        std::cout << "obs_data=" << obs_data << "\n";
         std::cout << "dq_SAC=" << dq_SAC << "\n";
       }
       // Run the model's forward pass without re-pushing to observations
