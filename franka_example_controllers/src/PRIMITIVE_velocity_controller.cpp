@@ -908,20 +908,22 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       //      STEPPERMOTOR_publisher_.msg_.header.stamp = ros::Time::now();
       STEPPERMOTOR_publisher_.unlockAndPublish();
     }
+    std::cout << "k=" << k << endl;
     std::cout << "Triggered stepper motor sooner!" << endl;
   }
 
   //  end startup phase if you reach below 1 mm distance to initial condition
-  if (norm_e_EE_t < 0.001 and start_up == true) {
-    if (false) {
+  if (norm_e_EE_t < 0.001 and start_up == true and e_EE_target[1]<0) {
+//    K_p = 0.1;
+//    K_i = 0.01;
+    if (true) {
       std::cout << "==========Start-up ended==========" << " \n";
       std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
-      std::cout << "EEposition=\n";
+      std::cout << "k=" << k << " \n";
       for (int i = 0; i < 3; i++) {
-        std::cout << EEposition(i) << " ";
-        std::cout << std::endl;
-        std::cout << "k=" << k << " \n";
-        std::cout << "k_startup_speed_profile=" << k_startup_speed_profile << " \n";
+        std::cout << "EEposition=" << EEposition(i) << endl;
+        std::cout << "e_EE_target=" << e_EE_target[i] << endl;
+//        std::cout << "k_startup_speed_profile=" << k_startup_speed_profile << " \n";
       }
     }
     start_up = false;
@@ -930,6 +932,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     // TODO ATTENTION: initialize KF at initial position
     X_prediction_ahead = EEposition;
     estimatesAposteriori = EEposition;
+//    X_prediction_ahead = r_star_tf_start_up;
+//    estimatesAposteriori = r_star_tf_start_up;
+    // Attention set initial dt for KF model 2
     k_timer = k;
 
     //    //    TODO this is not necessarily is going to lock
@@ -1034,6 +1039,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
         std::cout << "###################################\n";
         std::cout << "k=" << k << "\n";
         std::cout << "dq_SAC=" << dq_SAC << "\n";
+        std::cout << "e_t.at(1)*1000=" << e_t.at(1)*1000 << "\n";
       }
       // Run the model's forward pass without re-pushing to observations
       torch::jit::IValue output = actor.forward(observations);
