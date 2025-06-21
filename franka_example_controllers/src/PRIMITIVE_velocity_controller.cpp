@@ -214,7 +214,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   // Load your serialized model --- SAC Actor Neural Network
   actor = torch::jit::load(
       "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/config/"
-      "traced_model_Cpp_Fep_HW_284_double.pt");
+      "traced_model_Cpp_Fep_HW_304_double.pt");
   std::cout << "+++++Actor model loaded successfully.+++++" << std::endl;
   //  torch::Tensor input_tensor = torch::ones({1, 27});  // Example random tensor
   //  // Wrap inputs in a vector of torch::jit::IValue
@@ -252,7 +252,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   //  uncomment for two kinematics based experiments
   const std::string urdf_filename_biased = std::string(
       "/home/mahdi/catkin_ws/src/franka_ros/franka_description/robots/panda/"
-      "panda_corrected_Nosc_biased_1.urdf");
+      "panda_corrected_Nosc_biased_3.urdf");
   pinocchio::urdf::buildModel(urdf_filename_biased, model_pino_biased);
 
   // Sample a random configuration
@@ -538,6 +538,8 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     };
   }
   if (received_measurement == true) {
+    //    std::cout << "+-+-+-+- Reading and Preparing Measurements: Required step +-+-+-+- "
+    //              << std::endl;
     try {
       Commands curr_cmd = *(command_.readFromRT());
       //      TODO Pay attention: here we correct the camere raw measurements offsets
@@ -549,7 +551,11 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       //      // TODO
       //      double t_measurement = curr_cmd.t_stamp_camera_measurement;
       //      dt = (t_measurement - t_0) * 1000;  //[ms]
-      double dt = (k - k_timer);  // [ms]
+      dt = (k - k_timer);  // [ms]
+                           //      cout << "k=" << k << endl;
+                           //      cout << "k_timer=" << k_timer << endl;
+                           //      cout << "dt=" << dt << endl;
+
       k_timer = k;
       if (false) {
         cout << "++++++++++++++++++++++++++++++++++++++++++++" << endl;
@@ -639,7 +645,16 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     received_measurement = false;
   } else if (start_up == false) {
     //  TODO how can you make KF conditions especially initially more efficient?
+    //    if (received_measurement == true) {
+    //    std::cout << "0+++ received_measurement: " << received_measurement << std::endl;}
+    //    std::cout << "0+++ dt: " << dt << std::endl;
+    //    if (dt > 0) {
+    //    std::cout << "00+++ dt: " << dt << std::endl;}
+
     if (received_measurement == true and dt > 0) {
+      //      std::cout << "000++++++ KF updated After receiving measurement: OK+++++ " <<
+      //      std::endl;
+
       if (MODEL_0) {
         B(1) = dt;  //[ms]
         estimatesApriori = A * estimatesAposteriori + B * u;
@@ -706,6 +721,13 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
         Sk = Sk.inverse();
         gainMatrices = covarianceApriori * (C.transpose()) * Sk;
         estimatesAposteriori = estimatesApriori + gainMatrices * (p_hat_w - C * estimatesApriori);
+
+        Eigen::Vector3d innovation = p_hat_w - C * estimatesApriori;
+        //        std::cout << "++++++ KF updated After receiving measurement: OK+++++ " <<
+        //        std::endl; std::cout << "Innovation: " << innovation.transpose() << std::endl;
+        //        std::cout << "p_hat_w: " << p_hat_w << std::endl;
+        //        std::cout << "C * estimatesApriori: " << C * estimatesApriori << std::endl;
+
         Eigen::MatrixXd In;
         In = Eigen::MatrixXd::Identity(3, 3);
         Eigen::MatrixXd IminusKC;
@@ -833,6 +855,18 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       Eigen::Matrix<double, 9, 1> q_extended;
       // Copy the original 7 elements
       q_extended.head<7>() = q;
+
+      //      //ATTENTION: add bias to q_init of only biased jacobian
+      //      Eigen::Matrix<double, 6, 1> qinit_bias_wrong_kinematics;
+      //      qinit_bias_wrong_kinematics <<
+      //          -0.003957851566629522,
+      //          -0.0031612105414495777,
+      //          -0.0007148953721433522,
+      //          0.005061362690919819,
+      //          -0.0019350913294086038,
+      //          -0.050138776859159406;
+      //      q_extended.head<6>() += qinit_bias_wrong_kinematics;
+
       // Add two zero rows at the end
       q_extended.tail<2>().setZero();
       pinocchio::computeFrameJacobian(model_pino_biased, data_pino, q_extended, 26,
@@ -912,10 +946,13 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     std::cout << "Triggered stepper motor sooner!" << endl;
   }
 
-  //  end startup phase if you reach below 1 mm distance to initial condition
-  if (norm_e_EE_t < 0.001 and start_up == true and e_EE_target[1]<0) {
-//    K_p = 0.1;
-//    K_i = 0.01;
+  // //  End startup phase if you reach below 1 mm distance to initial condition (make sure y_EE has
+  // // passed the final startup target already)
+  //  if (norm_e_EE_t < 0.001 and start_up == true and e_EE_target[1] < 0) {
+  //  End startup phase if you reach below 1 mm distance to initial condition
+  if (norm_e_EE_t < 0.001 and start_up == true) {
+    //    K_p = 0.1;
+    //    K_i = 0.01;
     if (true) {
       std::cout << "==========Start-up ended==========" << " \n";
       std::cout << "norm_e_EE_t=" << norm_e_EE_t << " \n";
@@ -923,17 +960,17 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       for (int i = 0; i < 3; i++) {
         std::cout << "EEposition=" << EEposition(i) << endl;
         std::cout << "e_EE_target=" << e_EE_target[i] << endl;
-//        std::cout << "k_startup_speed_profile=" << k_startup_speed_profile << " \n";
+        //        std::cout << "k_startup_speed_profile=" << k_startup_speed_profile << " \n";
       }
     }
     start_up = false;
     //    received_measurement = false;
     std::cout << "Reached end of start-up phase!" << endl;
     // TODO ATTENTION: initialize KF at initial position
-    X_prediction_ahead = EEposition;
-    estimatesAposteriori = EEposition;
-//    X_prediction_ahead = r_star_tf_start_up;
-//    estimatesAposteriori = r_star_tf_start_up;
+    //    X_prediction_ahead = EEposition;
+    //    estimatesAposteriori = EEposition;
+    X_prediction_ahead = r_star_tf_start_up;
+    estimatesAposteriori = r_star_tf_start_up;
     // Attention set initial dt for KF model 2
     k_timer = k;
 
@@ -989,9 +1026,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     if (k_SAC % (1000 / freq_SAC) == 0 and start_up == false) {
       // Directly access obs data pointer to modify values without reallocation
       double* obs_data = obs.data_ptr<double>();
-      obs_data[0] = e_t.at(0)*1000;
-      obs_data[1] = e_t.at(1)*1000;
-      obs_data[2] = e_t.at(2)*1000;
+      obs_data[0] = e_t.at(0) * 1000;
+      obs_data[1] = e_t.at(1) * 1000;
+      obs_data[2] = e_t.at(2) * 1000;
       obs_data[3] = q(0);
       obs_data[4] = q(1);
       obs_data[5] = q(2);
@@ -1039,7 +1076,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
         std::cout << "###################################\n";
         std::cout << "k=" << k << "\n";
         std::cout << "dq_SAC=" << dq_SAC << "\n";
-        std::cout << "e_t.at(1)*1000=" << e_t.at(1)*1000 << "\n";
+        std::cout << "e_t.at(1)*1000=" << e_t.at(1) * 1000 << "\n";
       }
       // Run the model's forward pass without re-pushing to observations
       torch::jit::IValue output = actor.forward(observations);

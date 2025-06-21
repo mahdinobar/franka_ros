@@ -164,6 +164,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   // covariance matrix of the measurement noise
 //  Eigen::Matrix<double, 3, 3> R{{4, 0, 0}, {0, 25, 0}, {0, 0, 4}};
   Eigen::Matrix<double, 3, 3> R{{0.0625e-6, 0, 0}, {0, 0.0625e-6, 0}, {0, 0, 0.0625e-6}}; // [m^2]
+//  Eigen::Matrix<double, 3, 3> R{{0.0625e-7, 0, 0}, {0, 0.0625e-7, 0}, {0, 0, 0.0625e-7}}; // [m^2]
   // covariance matrix of the state disturbance
 //  Eigen::Matrix<double, 3, 3> Q{{1, 0, 0}, {0, 4, 0}, {0, 0, 1}};
   Eigen::Matrix<double, 3, 3> Q{{0.01e-6, 0, 0}, {0, 0.04e-6, 0}, {0, 0, 0.02e-6}}; // [m^2]
@@ -171,7 +172,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   //  Eigen::Matrix<double, 3, 1> x0 = r_star_tf_start_up;
   // ATTENTION to dimension
   Eigen::Matrix<double, 1, 1> u;  //[m/ms]
-  double u_mean = 0.0341e-3;      //[m/ms]
+  double u_mean = 0.0349028e-3;      //[m/ms]
   double u_std = 0.000050776e-3;  //[m/ms]
   //  TODO
   unsigned int maxDataSamples_KF = 2;
@@ -205,8 +206,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   double K_mismatch_2 = 0.2;
 
   // [Hz] this is for SAC and PI controller commands
-  int freq_PID = 13;
-  int freq_SAC = 13;
+  int freq_PID = 10;
+  int freq_SAC = 10;
   // [Hz] this is for KF+target stars at startup +PI controller feedback inputs at startup phase only
   int freq_fast = 1000;
 
