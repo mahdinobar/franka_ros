@@ -26,7 +26,7 @@ namespace franka_example_controllers {
 //
 //  M_pinv_ = Eigen::MatrixXd(svd.matrixV() * S_.transpose() * svd.matrixU().transpose());
 //}
-inline void pseudoInverseAnalytical(const Eigen::MatrixXd& A, Eigen::MatrixXd& A_pinv, double lambda) {
+inline void pseudoInverse(const Eigen::MatrixXd& A, Eigen::MatrixXd& A_pinv, double lambda) {
   int m = A.rows();
   int n = A.cols();
 
