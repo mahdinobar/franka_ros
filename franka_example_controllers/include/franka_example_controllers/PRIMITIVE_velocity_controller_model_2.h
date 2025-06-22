@@ -159,15 +159,17 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   Eigen::Matrix<double, 3, 3> C{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
   // covariance matrix of the state estimation error P0- abbreviated as "state covariance matrix"
 //  Eigen::Matrix<double, 3, 3> P0{{1, 0, 0}, {0, 4, 0}, {0, 0, 1}};
-  Eigen::Matrix<double, 3, 3> P0{{0.04e-6, 0, 0}, {0, 0.09e-6, 0}, {0, 0, 0.04e-6}}; // [m^2]
+//  Eigen::Matrix<double, 3, 3> P0{{0.04e-6, 0, 0}, {0, 0.09e-6, 0}, {0, 0, 0.04e-6}}; // [m^2]
+  Eigen::Matrix<double, 3, 3> P0{{0.01e-6, 0, 0}, {0, 0.04e-6, 0}, {0, 0, 0.01e-6}}; // [m^2]
 
   // covariance matrix of the measurement noise
 //  Eigen::Matrix<double, 3, 3> R{{4, 0, 0}, {0, 25, 0}, {0, 0, 4}};
-  Eigen::Matrix<double, 3, 3> R{{0.0625e-6, 0, 0}, {0, 0.0625e-6, 0}, {0, 0, 0.0625e-6}}; // [m^2]
-//  Eigen::Matrix<double, 3, 3> R{{0.0625e-7, 0, 0}, {0, 0.0625e-7, 0}, {0, 0, 0.0625e-7}}; // [m^2]
+//  Eigen::Matrix<double, 3, 3> R{{0.0625e-6, 0, 0}, {0, 0.0625e-6, 0}, {0, 0, 0.0625e-6}}; // [m^2]
+  Eigen::Matrix<double, 3, 3> R{{0.25-6, 0, 0}, {0, 4e-6, 0}, {0, 0, 0.01e-6}}; // [m^2]
   // covariance matrix of the state disturbance
 //  Eigen::Matrix<double, 3, 3> Q{{1, 0, 0}, {0, 4, 0}, {0, 0, 1}};
-  Eigen::Matrix<double, 3, 3> Q{{0.01e-6, 0, 0}, {0, 0.04e-6, 0}, {0, 0, 0.02e-6}}; // [m^2]
+//  Eigen::Matrix<double, 3, 3> Q{{0.01e-6, 0, 0}, {0, 0.04e-6, 0}, {0, 0, 0.02e-6}}; // [m^2]
+  Eigen::Matrix<double, 3, 3> Q{{0.01e-6, 0, 0}, {0, 0.04e-6, 0}, {0, 0, 0.04e-6}}; // [m^2]
   // guess of the initial state estimate
   //  Eigen::Matrix<double, 3, 1> x0 = r_star_tf_start_up;
   // ATTENTION to dimension
