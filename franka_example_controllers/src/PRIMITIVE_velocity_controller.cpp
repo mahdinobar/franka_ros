@@ -1164,7 +1164,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
       dq_command(i) = dq_command_PID(i) + dq_SAC(i);
-      //      dq_command(i) = dq_command_PID(i);
+      //            dq_command(i) = dq_command_PID(i);
 
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
