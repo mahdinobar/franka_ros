@@ -824,7 +824,10 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
               K_i * I_e[i];  //+ K_i * np.sum(e[:,1:],1)*dt_fast + K_d*(v_ref-v_e)
     }
     Eigen::MatrixXd J_translation_pinv;
-    pseudoInverse(J_translation, J_translation_pinv);
+//    pseudoInverse(J_translation, J_translation_pinv);
+    double damping_lambda = 0.01;
+    pseudoInverseAnalytical(J_translation, J_translation_pinv, damping_lambda);
+
 
     dq_command_PID = J_translation_pinv * vc;
   } else if (start_up == false) {
@@ -872,7 +875,9 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
       pinocchio::computeFrameJacobian(model_pino_biased, data_pino, q_extended, 26,
                                       pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED, jacobian_tmp);
       Eigen::MatrixXd J_translation_biased = jacobian_tmp.block(0, 0, 3, 7);
-      pseudoInverse(J_translation_biased, J_translation_pinv_biased);
+//      pseudoInverse(J_translation_biased, J_translation_pinv_biased);
+      double damping_lambda = 0.01;
+      pseudoInverseAnalytical(J_translation_biased, J_translation_pinv_biased, damping_lambda);
       dq_command_PID = J_translation_pinv_biased * vc;
 
       //      if (false) {
