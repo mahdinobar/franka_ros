@@ -208,8 +208,8 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
   double K_mismatch_2 = 0.2;
 
   // [Hz] this is for SAC and PI controller commands
-  int freq_PID = 100;
-  int freq_SAC = 100;
+  int freq_PID = 10;
+  int freq_SAC = 10;
   // [Hz] this is for KF+target stars at startup +PI controller feedback inputs at startup phase only
   int freq_fast = 1000;
 
@@ -226,6 +226,7 @@ class PRIMITIVEVelocityController : public controller_interface::MultiInterfaceC
 
   bool gripper_opened = false;
   ros::Publisher gripper_command_publisher_;
+
 
 };
 
