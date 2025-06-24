@@ -214,7 +214,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   // Load your serialized model --- SAC Actor Neural Network
   actor = torch::jit::load(
       "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/config/"
-      "traced_model_Cpp_Fep_HW_304_double.pt");
+      "traced_model_Cpp_Fep_HW_309_double.pt");
   std::cout << "+++++Actor model loaded successfully.+++++" << std::endl;
   //  torch::Tensor input_tensor = torch::ones({1, 27});  // Example random tensor
   //  // Wrap inputs in a vector of torch::jit::IValue
@@ -936,7 +936,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
   //    if (std::abs(e_EE_target[1]) < 0.020801 and start_up == true) {
   //  TODO improve temporary solution: due to delay manually approximated corrosponding startup
   //  phase, trigger motor after k~730[ms]
-  if (k > 350 and start_up == true) {
+  if (k > 370 and start_up == true) {
     //    TODO this is not necessarily is going to lock
     //    publish message to switch on the conveyor belt
     //    if (rate_trigger_() && STEPPERMOTOR_publisher_.trylock()) {
