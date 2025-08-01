@@ -214,7 +214,7 @@ bool PRIMITIVEVelocityController::init(hardware_interface::RobotHW* robot_hardwa
   // Load your serialized model --- SAC Actor Neural Network
   actor = torch::jit::load(
       "/home/mahdi/catkin_ws/src/franka_ros/franka_example_controllers/config/"
-      "traced_model_Cpp_Fep_HW_311_double.pt");
+      "traced_model_Cpp_Fep_HW_314_double.pt");
   std::cout << "+++++Actor model loaded successfully.+++++" << std::endl;
   //  torch::Tensor input_tensor = torch::ones({1, 27});  // Example random tensor
   //  // Wrap inputs in a vector of torch::jit::IValue
@@ -972,6 +972,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //    X_prediction_ahead = EEposition;
     //    estimatesAposteriori = EEposition;
     X_prediction_ahead = r_star_tf_start_up;
+    //    X_prediction_ahead(1) -= 0.002;
     estimatesAposteriori = r_star_tf_start_up;
     // Attention set initial dt for KF model 2
     k_timer = k;
@@ -1091,11 +1092,37 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
              output_tensor.dtype() == torch::kDouble);
       assert(output_tensor.is_contiguous());
 
-      //      // Map output tensor data directly to dq_SAC without copying
-      //      Eigen::Map<Eigen::Matrix<double, 1, 6>>
-      //      dq_SAC_map(output_tensor.data_ptr<double>()); dq_SAC = dq_SAC_map;  // Copy mapped
+      // Map output tensor data directly to dq_SAC without copying
+      Eigen::Map<Eigen::Matrix<double, 1, 6>> dq_SAC_map(output_tensor.data_ptr<double>());
+      dq_SAC = dq_SAC_map;  // Copy mapped
+
       //      data to dq_SAC
-      Eigen::Map<Eigen::Matrix<double, 1, 6>>(output_tensor.data_ptr<double>()).swap(dq_SAC);
+      //      //      TODO manual mismatch correction
+      //      Eigen::Map<Eigen::Matrix<double, 1,
+      //      6>>(output_tensor.data_ptr<double>()).swap(dq_SAC); if (k > 600) {
+      //        dq_SAC(2) = dq_SAC(2) - 0.005;
+      //        if (k > 1600) {
+      //          dq_SAC(2) = dq_SAC(2) - 0.005;
+      //          if (k > 2600) {
+      //            dq_SAC(2) = dq_SAC(2) + 0.005;
+      //            if (k > 3600) {
+      //              dq_SAC(2) = dq_SAC(2) + 0.010;
+      //              if (k > 4600) {
+      //                dq_SAC(2) = dq_SAC(2) + 0.010;
+      //                if (k > 5600) {
+      //                  dq_SAC(2) = dq_SAC(2) + 0.005;
+      //                  if (k > 6600) {
+      //                    dq_SAC(2) = dq_SAC(2) + 0.005;
+      //                    if (k > 7600) {
+      //                      dq_SAC(2) = dq_SAC(2) + 0.005;
+      //                    }
+      //                  }
+      //                }
+      //              }
+      //            }
+      //          }
+      //        }
+      //      }
 
       if (false) {
         std::cout << "++++++++++++++++++++++\n";
@@ -1167,7 +1194,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
     //  enforce joint constraints
     for (size_t i = 0; i < 7; ++i) {
       dq_command(i) = dq_command_PID(i) + dq_SAC(i);
-      //            dq_command(i) = dq_command_PID(i);
+      //      dq_command(i) = dq_command_PID(i);
 
       // TODO ATTENTION:  Check SAFETY LIMITS per 1 [ms]
       if (std::abs(dq_command(i) / 1000) > dq_max[i]) {
@@ -1188,7 +1215,7 @@ void PRIMITIVEVelocityController::update(const ros::Time& rosTime, const ros::Du
           dq_command(i) = +dq_max[i];
         }
       }
-      //              send control command
+      //              apply control command
       velocity_joint_handles_[i].setCommand(dq_command(i));
     }
   }
